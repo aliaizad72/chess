@@ -1,16 +1,31 @@
 # frozen_string_literal: true
 
-require 'matrix'
 # class that stores the pieces in the game
 class Board
-  attr_accessor :matrix
+  attr_accessor :array
 
   def initialize(size)
-    @matrix = Array.new(size).map { Array.new(size) }
+    @array = Array.new(size).map { Array.new(size) }
   end
 
   def insert(board_piece:, row:, column:)
-    matrix[row][column] = board_piece
+    array[row][column] = board_piece
+  end
+
+  def move(from_row:, from_column:, to_row:, to_column:)
+    element = select(row: from_row, column: from_column)
+    remove(row: from_row, column: from_column)
+    insert(board_piece: element, row: to_row, column: to_column)
+  end
+
+  private
+
+  def select(row:, column:)
+    array[row][column]
+  end
+
+  def remove(row:, column:)
+    array[row][column] = nil
   end
 end
 
