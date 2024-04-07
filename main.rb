@@ -29,13 +29,6 @@ class Board
   end
 end
 
-# rules of board and pieces that is specific to chess
-class ChessContext
-  def board_size
-    8
-  end
-end
-
 # superclass chess pieces
 class Piece
   attr_reader :color
@@ -80,7 +73,7 @@ class Piece
   end
 
   def scalar
-    2
+    1
   end
 
   def vector_multiply(vector, multiplier)
@@ -97,5 +90,43 @@ class Piece
       product.push(vector_product)
     end
     product
+  end
+end
+
+# superclass for pieces that can move 7 steps
+class SevenStepPiece < Piece
+  def scalar
+    7
+  end
+end
+
+# chess piece Queen
+class Queen < SevenStepPiece
+end
+
+# chess piece Rook
+class Rook < SevenStepPiece
+  def move_directions
+    %i[north
+       south
+       west
+       east]
+  end
+end
+
+# chess piece Bishop
+class Bishop < SevenStepPiece
+  def move_directions
+    %i[north_east
+       north_west
+       south_east
+       south_west]
+  end
+end
+
+# chess piece Knight
+class Knight < Piece
+  def moves
+    [[1, 2], [1, -2], [2, 1], [2, -1], [-1, 2], [-1, -2], [-2, 1], [-2, -1]]
   end
 end
