@@ -48,7 +48,7 @@ class Piece
     all_vectors
   end
 
-  private
+  # private
 
   def move_directions
     %i[north
@@ -128,5 +128,57 @@ end
 class Knight < Piece
   def moves
     [[1, 2], [1, -2], [2, 1], [2, -1], [-1, 2], [-1, -2], [-2, 1], [-2, -1]]
+  end
+end
+
+# chess piece King
+class King < Piece
+  def initialize(color)
+    super(color)
+    @first_move = true
+  end
+end
+
+# chess piece YellowPawn
+class YellowPawn < Piece
+  attr_accessor :first_move
+
+  def initialize
+    super('yellow')
+    @first_move = true
+  end
+
+  def moves
+    result = super(moves)
+    result + [[2, 0]] if first_move
+    result
+  end
+
+  def move_directions
+    %i[north
+       north_east
+       north_west]
+  end
+end
+
+# chess piece BluePawn
+class BluePawn < Piece
+  attr_accessor :first_move
+
+  def initialize
+    super('blue')
+    @first_move = true
+  end
+
+  def moves
+    result = super(moves)
+    result + [[-2, 0]] if first_move
+    result
+  end
+
+  def move_directions
+    %i[south
+       south_east
+       south_west]
   end
 end
