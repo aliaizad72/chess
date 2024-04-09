@@ -20,7 +20,7 @@ class Board
     insert(board_piece: element, row: to_row, column: to_column)
   end
 
-  private
+  # private
 
   def select(row:, column:)
     array[row][column]
@@ -39,7 +39,7 @@ class Piece
     @color = color
   end
 
-  def moves
+  def all_moves
     # array with each possible vector
     all_vectors = []
     move_directions.each do |direction|
@@ -48,6 +48,10 @@ class Piece
       all_vectors.push(vectors.shift) until vectors.empty?
     end
     all_vectors
+  end
+
+  def moves(board)
+    all_moves.select { |move| move.all? { |i| i >= 0 && i < board.size } }
   end
 
   # private
@@ -128,7 +132,7 @@ end
 
 # chess piece Knight
 class Knight < Piece
-  def moves
+  def all_moves
     [[1, 2], [1, -2], [2, 1], [2, -1], [-1, 2], [-1, -2], [-2, 1], [-2, -1]]
   end
 end
@@ -149,7 +153,7 @@ end
 
 # chess piece Pawn
 class Pawn < FirstMovePiece
-  def moves
+  def all_moves
     result = super
     result += two_step if first_move
     result
@@ -305,3 +309,7 @@ class ChessBoard < Board
     end
   end
 end
+
+board = ChessBoard.new
+pawn = board.select(row: 0, column: 0)
+p pawn.moves(board)
