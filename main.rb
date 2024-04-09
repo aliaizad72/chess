@@ -139,19 +139,30 @@ class King < Piece
   end
 end
 
-# chess piece YellowPawn
-class YellowPawn < Piece
+# chess piece Pawn
+class Pawn < Piece
   attr_accessor :first_move
 
-  def initialize
-    super('yellow')
+  def initialize(color)
     @first_move = true
+    super(color)
   end
 
   def moves
-    result = super(moves)
-    result + [[2, 0]] if first_move
+    result = super
+    result += two_step if first_move
     result
+  end
+
+  def two_step
+    []
+  end
+end
+
+# chess piece YellowPawn
+class YellowPawn < Pawn
+  def initialize
+    super('yellow')
   end
 
   def move_directions
@@ -159,26 +170,25 @@ class YellowPawn < Piece
        north_east
        north_west]
   end
+
+  def two_step
+    [[2, 0]]
+  end
 end
 
 # chess piece BluePawn
-class BluePawn < Piece
-  attr_accessor :first_move
-
+class BluePawn < Pawn
   def initialize
     super('blue')
-    @first_move = true
-  end
-
-  def moves
-    result = super(moves)
-    result + [[-2, 0]] if first_move
-    result
   end
 
   def move_directions
     %i[south
        south_east
        south_west]
+  end
+
+  def two_step
+    [[-2, 0]]
   end
 end
