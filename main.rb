@@ -131,23 +131,22 @@ class Knight < Piece
   end
 end
 
-# chess piece King
-class King < Piece
-  def initialize(color)
-    super(color)
-    @first_move = true
-  end
-end
-
-# chess piece Pawn
-class Pawn < Piece
+# superclass where first move matters
+class FirstMovePiece < Piece
   attr_accessor :first_move
 
   def initialize(color)
     @first_move = true
     super(color)
   end
+end
 
+# chess piece King
+class King < FirstMovePiece
+end
+
+# chess piece Pawn
+class Pawn < FirstMovePiece
   def moves
     result = super
     result += two_step if first_move
