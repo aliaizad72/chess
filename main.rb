@@ -3,8 +3,10 @@
 # class that stores the pieces in the game
 class Board
   attr_accessor :array
+  attr_reader :size
 
   def initialize(size)
+    @size = size
     @array = Array.new(size).map { Array.new(size) }
   end
 
@@ -154,7 +156,7 @@ class Pawn < FirstMovePiece
   end
 
   def two_step
-    []
+    [] # implement this in subclass
   end
 end
 
@@ -282,5 +284,24 @@ class Blue < ChessSet
 
   def pawn_row
     6
+  end
+end
+
+# A concrete class of ChessBoard
+class ChessBoard < Board
+  def initialize
+    super(8)
+    insert_pieces
+  end
+
+  def insert_pieces
+    insert_set(Yellow.new)
+    insert_set(Blue.new)
+  end
+
+  def insert_set(chess_set_obj)
+    chess_set_obj.set.each do |piece_arr|
+      insert(board_piece: piece_arr[0], row: piece_arr[1], column: piece_arr[2])
+    end
   end
 end
