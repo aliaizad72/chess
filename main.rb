@@ -158,12 +158,8 @@ class Pawn < FirstMovePiece
   end
 end
 
-# chess piece YellowPawn
-class YellowPawn < Pawn
-  def initialize
-    super('yellow')
-  end
-
+# Pawn piece for Player that move First
+class FirstPlayerPawn < Pawn
   def move_directions
     %i[north
        north_east
@@ -175,12 +171,8 @@ class YellowPawn < Pawn
   end
 end
 
-# chess piece BluePawn
-class BluePawn < Pawn
-  def initialize
-    super('blue')
-  end
-
+# Pawn piece for Player move Second
+class SecondPlayerPawn < Pawn
   def move_directions
     %i[south
        south_east
@@ -189,5 +181,106 @@ class BluePawn < Pawn
 
   def two_step
     [[-2, 0]]
+  end
+end
+
+# class that holds all Yellow pieces set, along with its starting row, column
+# [[Piece, row, column], .., ..]
+class ChessSet
+  def set
+    pawns + rooks + knights + bishops + queen + king
+  end
+
+  def color
+    'insert color in subclass'
+  end
+
+  def pawn_class
+    # insert corresponding Pawn class in the set
+  end
+
+  def non_pawn_row
+    # insert corresponding non_pawn starting row position
+  end
+
+  def pawn_row
+    # insert corresponding pawn starting row position
+  end
+
+  def pawns
+    outer = []
+    8.times do |column|
+      pawn = pawn_class.new(color)
+      outer.push([pawn, pawn_row, column])
+    end
+    outer
+  end
+
+  def two_piece(piece_class, right_column_num)
+    outer = []
+    left_column_num = 7 - right_column_num
+    [left_column_num, right_column_num].each do |column|
+      piece = piece_class.new(color)
+      outer.push([piece, non_pawn_row, column])
+    end
+    outer
+  end
+
+  def rooks
+    two_piece(Rook, 7)
+  end
+
+  def knights
+    two_piece(Knight, 6)
+  end
+
+  def bishops
+    two_piece(Bishop, 5)
+  end
+
+  def queen
+    [[Queen.new(color), non_pawn_row, 3]]
+  end
+
+  def king
+    [[King.new(color), non_pawn_row, 4]]
+  end
+end
+
+# the yellow set in the game
+class Yellow < ChessSet
+  def color
+    'yellow'
+  end
+
+  def pawn_class
+    FirstPlayerPawn
+  end
+
+  def non_pawn_row
+    0
+  end
+
+  def pawn_row
+    1
+  end
+end
+
+# the Blue set in this game
+class Blue < ChessSet
+  def color
+    'blue'
+  end
+
+  def pawn_class
+    SecondPlayerPawn
+  end
+
+  def non_pawn_row
+    7
+  end
+
+  def pawn_row
+    6
   end
 end
