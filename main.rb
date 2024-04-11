@@ -301,6 +301,15 @@ class ChessBoard < Board
     insert_pieces
   end
 
+  def moves(row:, column:)
+    piece = select(row: row, column: column)
+    move_array = coordinates_after_move(piece)
+    in_bound_moves = filter_out_of_bounds(move_array)
+    filter_legit_moves(piece: piece, in_bound_moves: in_bound_moves)
+  end
+
+  # private
+
   def insert_pieces
     insert_set(Yellow.new)
     insert_set(Blue.new)
@@ -312,10 +321,48 @@ class ChessBoard < Board
     end
   end
 
-  def moves(row:, column:)
+  def coordinates_after_move(piece)
+    move_array = piece.all_moves.dup
+    move_array.each do |move|
+      move[0] += piece.row
+      move[1] += piece.column
+    end
+    move_array
+  end
+
+  def filter_out_of_bounds(move_array)
+    move_array.select { |move| move.all? { |i| i >= 0 && i < size } }
+  end
+
+  def filter_legit_moves(piece:, in_bound_moves:)
+    in_bound_moves.select { |move| legit_move?(piece: piece, row: move[0], column: move[1]) }
+  end
+
+  def empty?(row:, column:)
     piece = select(row: row, column: column)
-    piece.all_moves.select { |move| move.all? { |i| i >= 0 && i < size } }
+
+    if piece.nil?
+      true
+    else
+      false
+    end
+  end
+
+  def enemy?(piece:, row:, column:)
+    return false if empty?(row: row, column: column)
+
+    tenant = select(row: row, column: column)
+    tenant.color != piece.color
+  end
+
+  def legit_move?(piece:, row:, column:)
+    if empty?(row: row, column: column) || enemy?(piece: piece, row: row, column: column)
+      true
+    else
+      false
+    end
   end
 end
 
 board = ChessBoard.new
+p board.moves(row: 0, column: 1)
