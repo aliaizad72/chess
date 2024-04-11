@@ -33,10 +33,13 @@ end
 
 # superclass chess pieces
 class Piece
+  attr_accessor :row, :column
   attr_reader :color
 
-  def initialize(color)
+  def initialize(color:, row:, column:)
     @color = color
+    @row = row
+    @column = column
   end
 
   def all_moves
@@ -141,9 +144,9 @@ end
 class FirstMovePiece < Piece
   attr_accessor :first_move
 
-  def initialize(color)
+  def initialize(color:, row:, column:)
     @first_move = true
-    super(color)
+    super(color: color, row: row, column: column)
   end
 end
 
@@ -216,40 +219,44 @@ class ChessSet
   def pawns
     outer = []
     8.times do |column|
-      pawn = pawn_class.new(color)
+      pawn = pawn_class.new(color: color, row: pawn_row, column: column)
       outer.push([pawn, pawn_row, column])
     end
     outer
   end
 
-  def two_piece(piece_class, right_column_num)
+  def two_piece(piece_class:, right_column_num:)
     outer = []
     left_column_num = 7 - right_column_num
     [left_column_num, right_column_num].each do |column|
-      piece = piece_class.new(color)
+      piece = piece_class.new(color: color, row: non_pawn_row, column: column)
       outer.push([piece, non_pawn_row, column])
     end
     outer
   end
 
   def rooks
-    two_piece(Rook, 7)
+    two_piece(piece_class: Rook, right_column_num: 7)
   end
 
   def knights
-    two_piece(Knight, 6)
+    two_piece(piece_class: Knight, right_column_num: 6)
   end
 
   def bishops
-    two_piece(Bishop, 5)
+    two_piece(piece_class: Bishop, right_column_num: 5)
   end
 
   def queen
-    [[Queen.new(color), non_pawn_row, 3]]
+    column = 3
+    queen = Queen.new(color: color, row: non_pawn_row, column: column)
+    [[queen, non_pawn_row, column]]
   end
 
   def king
-    [[King.new(color), non_pawn_row, 4]]
+    column = 4
+    king = King.new(color: color, row: non_pawn_row, column: column)
+    [[king, non_pawn_row, column]]
   end
 end
 
@@ -309,7 +316,3 @@ class ChessBoard < Board
     end
   end
 end
-
-board = ChessBoard.new
-pawn = board.select(row: 0, column: 0)
-p pawn.moves(board)
