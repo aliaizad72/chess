@@ -161,6 +161,14 @@ class Pawn < FirstMovePiece
   def two_step
     [] # implement this in subclass
   end
+
+  def diagonals
+    [[]] # implement this in subclass
+  end
+
+  def diagonal?(move)
+    diagonals.include?(move)
+  end
 end
 
 # Pawn piece for Player that move First
@@ -174,6 +182,10 @@ class FirstPlayerPawn < Pawn
   def two_step
     [[2, 0]]
   end
+
+  def diagonals
+    [[1, 1], [1, -1]]
+  end
 end
 
 # Pawn piece for Player move Second
@@ -186,6 +198,10 @@ class SecondPlayerPawn < Pawn
 
   def two_step
     [[-2, 0]]
+  end
+
+  def diagonals
+    [[-1, 1], [1, -1]]
   end
 end
 
@@ -303,8 +319,9 @@ class ChessBoard < Board
 
   def moves(row:, column:)
     piece = select(row: row, column: column)
-    move_array = coordinates_after_move(piece)
-    in_bound_moves = filter_out_of_bounds(move_array)
+    move_array = piece_move_array(piece)
+    after_move_array = coordinates_after_move(piece: piece, array: move_array)
+    in_bound_moves = filter_out_of_bounds(after_move_array)
     filter_legit_moves(piece: piece, in_bound_moves: in_bound_moves)
   end
 
@@ -321,8 +338,24 @@ class ChessBoard < Board
     end
   end
 
-  def coordinates_after_move(piece)
-    move_array = piece.all_moves.dup
+  def piece_move_array(piece)
+    if piece.is_a? Pawn
+      filter_pawn_enemy_diag(piece)
+    else
+      piece.all_moves
+    end
+  end
+
+  def filter_pawn_enemy_diag(pawn)
+    moves = pawn.all_moves.dup
+    pawn.all_moves.each do |move|
+      moves.delete(move) if pawn.diagonal?(move) && !enemy?(piece: pawn, row: move[0], column: move[1])
+    end
+    moves
+  end
+
+  def coordinates_after_move(piece:, array:)
+    move_array = array.dup
     move_array.each do |move|
       move[0] += piece.row
       move[1] += piece.column
@@ -365,4 +398,4 @@ class ChessBoard < Board
 end
 
 board = ChessBoard.new
-p board.moves(row: 0, column: 1)
+p board.moves(row: 1, column: 1)
