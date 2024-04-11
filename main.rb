@@ -53,10 +53,6 @@ class Piece
     all_vectors
   end
 
-  def moves(board)
-    all_moves.select { |move| move.all? { |i| i >= 0 && i < board.size } }
-  end
-
   # private
 
   def move_directions
@@ -315,4 +311,11 @@ class ChessBoard < Board
       insert(board_piece: piece_arr[0], row: piece_arr[1], column: piece_arr[2])
     end
   end
+
+  def moves(row:, column:)
+    piece = select(row: row, column: column)
+    piece.all_moves.select { |move| move.all? { |i| i >= 0 && i < size } }
+  end
 end
+
+board = ChessBoard.new
