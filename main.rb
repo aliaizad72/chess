@@ -453,7 +453,7 @@ class BoardDisplay
     end
   end
 
-  def seperator(column_size = board.size)
+  def seperator(column_size)
     str = sep_str * column_size + '+'.colorize(mode: :bold)
     str.prepend('  ')
   end
@@ -474,12 +474,14 @@ class BoardDisplay
     str.prepend('    ')
   end
 
-  def show_board
-    8.times do |row_num|
-      puts seperator if row_num.zero?
-      puts row(row_num)
-      puts seperator
-      puts column_index_row if row_num == 7
+  def show_board(board = @board)
+    last = board.size - 1
+    column_num = board.size
+    last.downto(0) do |row_num|
+      puts seperator(column_num) if row_num == 7
+      puts row(row_num, column_num)
+      puts seperator(column_num)
+      puts column_index_row if row_num.zero?
     end
   end
 end
