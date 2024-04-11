@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require 'colorize'
 # class that stores the pieces in the game
 class Board
   attr_accessor :array
@@ -51,6 +52,14 @@ class Piece
       all_vectors.push(vectors.shift) until vectors.empty?
     end
     all_vectors
+  end
+
+  def initials
+    # implement in subclass
+  end
+
+  def to_s
+    initials.colorize(color.to_sym)
   end
 
   # private
@@ -107,10 +116,17 @@ end
 
 # chess piece Queen
 class Queen < SevenStepPiece
+  def initials
+    'Q'
+  end
 end
 
 # chess piece Rook
 class Rook < SevenStepPiece
+  def initials
+    'R'
+  end
+
   def move_directions
     %i[north
        south
@@ -121,6 +137,10 @@ end
 
 # chess piece Bishop
 class Bishop < SevenStepPiece
+  def initials
+    'B'
+  end
+
   def move_directions
     %i[north_east
        north_west
@@ -131,6 +151,10 @@ end
 
 # chess piece Knight
 class Knight < Piece
+  def initials
+    'N'
+  end
+
   def all_moves
     [[1, 2], [1, -2], [2, 1], [2, -1], [-1, 2], [-1, -2], [-2, 1], [-2, -1]]
   end
@@ -148,10 +172,17 @@ end
 
 # chess piece King
 class King < FirstMovePiece
+  def initials
+    'K'
+  end
 end
 
 # chess piece Pawn
 class Pawn < FirstMovePiece
+  def initials
+    'P'
+  end
+
   def all_moves
     result = super
     result += two_step if first_move
@@ -397,5 +428,63 @@ class ChessBoard < Board
   end
 end
 
+# class to handle Board displays
+class BoardDisplay
+  attr_reader :board
+
+  def initialize(board)
+    @board = board
+  end
+
+  def sep_str
+    '+---'.colorize(mode: :bold)
+  end
+
+  def row_str(row:, column:)
+    element = board.select(row: row, column: column)
+    '|'.colorize(mode: :bold) + " #{occupied?(element)} "
+  end
+
+  def occupied?(element)
+    if element.nil?
+      ' '
+    else
+      element
+    end
+  end
+
+  def seperator(column_size = board.size)
+    str = sep_str * column_size + '+'.colorize(mode: :bold)
+    str.prepend('  ')
+  end
+
+  def row(row_num, column_num = board.size)
+    str = "#{row_num + 1} "
+    column_num.times do |column|
+      str += row_str(row: row_num, column: column)
+    end
+    str += '|'.colorize(mode: :bold)
+  end
+
+  def column_index_row
+    str = ''
+    ('A'..'H').each do |letter|
+      str += "#{letter}   "
+    end
+    str.prepend('    ')
+  end
+
+  def show_board
+    8.times do |row_num|
+      puts seperator if row_num.zero?
+      puts row(row_num)
+      puts seperator
+      puts column_index_row if row_num == 7
+    end
+  end
+end
+
 board = ChessBoard.new
-p board.moves(row: 1, column: 1)
+display = BoardDisplay.new(board)
+queen = Queen.new(color: 'yellow', row: 0, column: 3)
+display.show_board
