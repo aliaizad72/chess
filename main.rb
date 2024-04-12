@@ -509,8 +509,22 @@ class BoardDisplay
     show_board(board_copy)
   end
 
-  # private
+  # translate input on the grid to board format
+  def translate(input)
+    input_arr = input.split('')
+    y = input_arr[0]
+    x = input_arr[1]
+    [y.ord - 97, x.ord - 49]
+  end
 
+  def valid_input?(input)
+    return false unless input.length == 2
+
+    input_arr = input.split('')
+    input_arr[0].between?('a', 'h') && input_arr[1].between?('1', '8')
+  end
+
+  # private
   def seperator(column_size)
     str = sep_str * column_size + '+'.colorize(mode: :bold)
     str.prepend('  ')
@@ -584,6 +598,26 @@ class BoardDisplay
   end
 end
 
+# class to differentiate players
+class Player
+  def initialize(name:, color:)
+    @name = name
+    @color = color
+  end
+end
+
+# emulates someone that organises the game, takes in input etc.
+class ChessIO
+  def intro
+    'Welcome to Chess'
+  end
+
+  def ask_name
+    print 'Enter your name: '
+    gets.chomp
+  end
+end
+
 board = ChessBoard.new
 display = BoardDisplay.new(board)
-display.show_moves(row: 1, column: 1)
+p display.translate('a1')
