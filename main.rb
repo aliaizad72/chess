@@ -28,8 +28,6 @@ class Board
   def remove(row:, column:)
     array[row][column] = nil
   end
-
-
 end
 
 # superclass chess pieces
@@ -616,8 +614,44 @@ class ChessIO
     print 'Enter your name: '
     gets.chomp
   end
+
+  def ask_piece
+    print 'Enter the piece you want to move: '
+    gets.chomp
+  end
 end
 
-board = ChessBoard.new
-display = BoardDisplay.new(board)
-p display.translate('a1')
+# the game
+class Chess
+  attr_accessor :board
+  attr_reader :io, :players, :display
+
+  def initialize
+    @board = ChessBoard.new
+    @display = BoardDisplay.new(board)
+    @io = ChessIO.new
+    @players = add_players
+  end
+
+  def colors
+    %w[yellow blue]
+  end
+
+  def add_players
+    color_arr = colors
+    players = []
+    2.times do
+      name = io.ask_name
+      color = color_arr.delete(color_arr.sample)
+      player = Player.new(name: name, color: color)
+      players.push(player)
+    end
+    players
+  end
+
+  def play
+    io.intro
+  end
+end
+
+p Chess.new.players
