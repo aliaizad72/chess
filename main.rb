@@ -28,6 +28,8 @@ class Board
   def remove(row:, column:)
     array[row][column] = nil
   end
+
+
 end
 
 # superclass chess pieces
@@ -60,6 +62,16 @@ class Piece
     initials.colorize(color.to_sym)
   end
 
+  def moves_sums
+    hash = all_moves
+    hash.each_value do |moves|
+      moves.each do |move|
+        move[0] = move[0] + row
+        move[1] = move[1] + column
+      end
+    end
+    hash
+  end
   # private
 
   def move_directions
@@ -361,8 +373,7 @@ class ChessBoard < Board
 
   def moves(row:, column:)
     piece = select(row: row, column: column)
-    all_moves = piece.all_moves
-    after_move_hash = coordinates_after_move(piece: piece, hash: all_moves)
+    after_move_hash = piece.moves_sums
     in_bound_moves = filter_out_of_bounds(after_move_hash)
     in_bound_moves = filter_pawn_moves(pawn: piece, hash: in_bound_moves) if piece.is_a? Pawn
     filter_blocked_path(piece: piece, move_hash: in_bound_moves)
@@ -379,21 +390,6 @@ class ChessBoard < Board
     chess_set_obj.set.each do |piece_arr|
       insert(board_piece: piece_arr[0], row: piece_arr[1], column: piece_arr[2])
     end
-  end
-
-  def coordinates_after_move(piece:, hash:)
-    after_move_hash = {}
-    hash.each do |direction, moves|
-      mapped_array = []
-      moves.each do |move|
-        new_coordinate = []
-        new_coordinate[0] = move[0] + piece.row
-        new_coordinate[1] = move[1] + piece.column
-        mapped_array.push(new_coordinate)
-      end
-      after_move_hash[direction] = mapped_array
-    end
-    after_move_hash
   end
 
   def filter_out_of_bounds(move_hash)
@@ -583,4 +579,4 @@ end
 
 board = ChessBoard.new
 display = BoardDisplay.new(board)
-display.show_moves(row: 1, column: 1)
+display.show_moves(row: 0, column: 1)
