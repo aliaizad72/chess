@@ -101,7 +101,7 @@ class Piece
     move_array.each do |move|
       return move_array.index(move) if board.empty?(row: move[0], column: move[1]) && move_array.last == move
 
-      if board.enemy?(piece: self, row: move[0], column: move[1])
+      if board.enemy?(obj: self, row: move[0], column: move[1])
         return move_array.index(move)
       elsif board.ally?(piece: self, row: move[0], column: move[1])
         return move_array.index(move) - 1
@@ -268,7 +268,7 @@ class Pawn < FirstMovePiece
       next unless diagonals.include?(direction)
 
       move = moves[0] # diagonal only one moves
-      moves.delete(move) unless board.enemy?(piece: self, row: move[0], column: move[1])
+      moves.delete(move) unless board.enemy?(obj: self, row: move[0], column: move[1])
     end
     move_hash
   end
@@ -465,11 +465,11 @@ class ChessBoard < Board
     end
   end
 
-  def enemy?(piece:, row:, column:)
+  def enemy?(obj:, row:, column:)
     return false if empty?(row: row, column: column)
 
     tenant = select(row: row, column: column)
-    tenant.color != piece.color
+    tenant.color != obj.color
   end
 
   def ally?(piece:, row:, column:)
@@ -512,7 +512,7 @@ class BoardDisplay
     input_arr = input.split('')
     y = input_arr[0]
     x = input_arr[1]
-    [y.ord - 97, x.ord - 49]
+    [x.ord - 49, y.ord - 97]
   end
 
   def valid_input?(input)
@@ -598,6 +598,8 @@ end
 
 # class to differentiate players
 class Player
+  attr_reader :name, :color
+
   def initialize(name:, color:)
     @name = name
     @color = color
@@ -618,6 +620,10 @@ class ChessIO
   def ask_piece
     print 'Enter the piece you want to move: '
     gets.chomp
+  end
+
+  def error(type)
+    { 'input' => 'The input given was invalid. Try again below.' }[type]
   end
 end
 
@@ -649,9 +655,25 @@ class Chess
     players
   end
 
-  def play
-    io.intro
+  def ask_piece
+    input = io.ask_piece
+    until display.valid_input?(input)
+      puts io.error('input')
+      input = io.ask_piece
+    end
+    input
+  end
+
+  def input_piece?(input_str)
+    input_arr = display.translate(input_str)
+    !board.empty?(row: input_arr[0], column: input_arr[1])
+  end
+
+  def input_enemy?(player:, input_str:)
+    input_arr = display.translate(input_str)
+    board.enemy?(obj: player, row: input_arr[0], column: input_arr[1])
   end
 end
 
-p Chess.new.players
+chess = Chess.new
+chess.ask_piece
