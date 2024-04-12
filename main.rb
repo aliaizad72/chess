@@ -72,7 +72,44 @@ class Piece
     end
     hash
   end
+
+  def filter_moves(board)
+    move_hash = moves_sums
+    move_hash = filter_in_bounds(board: board, move_hash: move_hash)
+    filter_blocked_path(board: board, move_hash: move_hash)
+  end
+
   # private
+
+  def filter_in_bounds(board:, move_hash:)
+    move_hash.each_value do |moves|
+      moves.select! { |move| move.all? { |i| i >= 0 && i < board.size } }
+    end
+    move_hash
+  end
+
+  def filter_blocked_path(board:, move_hash:)
+    move_hash.each do |direction, moves|
+      next if moves.empty?
+
+      index = find_end_index(board: board, move_array: moves)
+      filtered = moves[0, index + 1]
+      move_hash[direction] = filtered
+    end
+    move_hash
+  end
+
+  def find_end_index(board:, move_array:)
+    move_array.each do |move|
+      return move_array.index(move) if board.empty?(row: move[0], column: move[1]) && move_array.last == move
+
+      if board.enemy?(piece: self, row: move[0], column: move[1])
+        return move_array.index(move)
+      elsif board.ally?(piece: self, row: move[0], column: move[1])
+        return move_array.index(move) - 1
+      end
+    end
+  end
 
   def move_directions
     %i[north
@@ -216,6 +253,39 @@ class Pawn < FirstMovePiece
 
   def diagonals
     # implement this in subclass
+  end
+
+  def filter_moves(board)
+    move_hash = moves_sums
+    move_hash = filter_diagonals(board: board, move_hash: move_hash)
+    move_hash = filter_two_steps(board: board, move_hash: move_hash)
+    move_hash = filter_in_bounds(board: board, move_hash: move_hash)
+    filter_blocked_path(board: board, move_hash: move_hash)
+  end
+
+  # private
+
+  def filter_diagonals(board:, move_hash:)
+    move_hash.each do |direction, moves|
+      next unless diagonals.include?(direction)
+
+      move = moves[0] # diagonal only one moves
+      moves.delete(move) unless board.enemy?(piece: self, row: move[0], column: move[1])
+    end
+    move_hash
+  end
+
+  def filter_two_steps(board:, move_hash:)
+    move_hash.each do |direction, moves|
+      next unless main_direction == direction
+
+      moves.each do |move|
+        next unless two_step.include?(move)
+
+        moves.delete(move) unless board.empty?(row: move[0], column: move[1])
+      end
+    end
+    move_hash
   end
 end
 
@@ -373,13 +443,8 @@ class ChessBoard < Board
 
   def moves(row:, column:)
     piece = select(row: row, column: column)
-    after_move_hash = piece.moves_sums
-    in_bound_moves = filter_out_of_bounds(after_move_hash)
-    in_bound_moves = filter_pawn_moves(pawn: piece, hash: in_bound_moves) if piece.is_a? Pawn
-    filter_blocked_path(piece: piece, move_hash: in_bound_moves)
+    piece.filter_moves(self)
   end
-
-  # private
 
   def insert_pieces
     insert_set(Yellow.new)
@@ -392,52 +457,6 @@ class ChessBoard < Board
     end
   end
 
-  def filter_out_of_bounds(move_hash)
-    move_hash.each_value do |moves|
-      moves.select! { |move| move.all? { |i| i >= 0 && i < size } }
-    end
-    move_hash
-  end
-
-  def filter_pawn_moves(pawn:, hash:)
-    hash = pawn_delete_diagonal(pawn: pawn, move_hash: hash)
-    pawn_delete_two_steps(pawn: pawn, move_hash: hash)
-  end
-
-  def pawn_delete_diagonal(pawn:, move_hash:)
-    move_hash.each do |direction, moves|
-      next unless pawn.diagonals.include?(direction)
-
-      move = moves[0] # diagonal only one moves
-      moves.delete(move) unless enemy?(piece: pawn, row: move[0], column: move[1])
-    end
-    move_hash
-  end
-
-  def pawn_delete_two_steps(pawn:, move_hash:)
-    move_hash.each do |direction, moves|
-      next unless pawn.main_direction == direction
-
-      moves.each do |move|
-        next unless pawn.two_step.include?(move)
-
-        moves.delete(move) unless empty?(row: move[0], column: move[1])
-      end
-    end
-    move_hash
-  end
-
-  def filter_blocked_path(piece:, move_hash:)
-    move_hash.each do |direction, moves|
-      next if moves.empty?
-
-      index = find_end_index(piece: piece, moves: moves)
-      filtered = moves[0, index + 1]
-      move_hash[direction] = filtered
-    end
-    move_hash
-  end
-
   def empty?(row:, column:)
     piece = select(row: row, column: column)
 
@@ -445,18 +464,6 @@ class ChessBoard < Board
       true
     else
       false
-    end
-  end
-
-  def find_end_index(piece:, moves:)
-    moves.each do |move|
-      return moves.index(move) if empty?(row: move[0], column: move[1]) && moves.last == move
-
-      if enemy?(piece: piece, row: move[0], column: move[1])
-        return moves.index(move)
-      elsif ally?(piece: piece, row: move[0], column: move[1])
-        return moves.index(move) - 1
-      end
     end
   end
 
@@ -579,4 +586,4 @@ end
 
 board = ChessBoard.new
 display = BoardDisplay.new(board)
-display.show_moves(row: 0, column: 1)
+display.show_moves(row: 1, column: 1)
