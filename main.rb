@@ -45,11 +45,11 @@ class Piece
 
   def all_moves
     # array with each possible vector
-    all_vectors = []
+    all_vectors = {}
     move_directions.each do |direction|
       vector = base_vectors(direction)
       vectors = max_range_vectors(vector, scalar)
-      all_vectors.push(vectors.shift) until vectors.empty?
+      all_vectors[direction] = vectors
     end
     all_vectors
   end
@@ -156,7 +156,14 @@ class Knight < Piece
   end
 
   def all_moves
-    [[1, 2], [1, -2], [2, 1], [2, -1], [-1, 2], [-1, -2], [-2, 1], [-2, -1]]
+    { l1: [[1, 2]],
+      l2: [[1, -2]],
+      l3: [[2, 1]],
+      l4: [[2, -1]],
+      l5: [[-1, 2]],
+      l6: [[-1, -2]],
+      l7: [[-2, 1]],
+      l8: [[-2, -1]] }
   end
 end
 
@@ -185,8 +192,12 @@ class Pawn < FirstMovePiece
 
   def all_moves
     result = super
-    result += two_step if first_move
+    result[main_direction] += two_step if first_move
     result
+  end
+
+  def main_direction
+    # :symbol (implement in subclass)
   end
 
   def two_step
@@ -210,12 +221,17 @@ class FirstPlayerPawn < Pawn
        north_west]
   end
 
+  def main_direction
+    :north
+  end
+
   def two_step
     [[2, 0]]
   end
 
   def diagonals
-    [[1, 1], [1, -1]]
+    %i[north_west
+       north_east]
   end
 end
 
@@ -232,7 +248,8 @@ class SecondPlayerPawn < Pawn
   end
 
   def diagonals
-    [[-1, 1], [1, -1]]
+    %i[south_east
+       south_west]
   end
 end
 
@@ -350,10 +367,11 @@ class ChessBoard < Board
 
   def moves(row:, column:)
     piece = select(row: row, column: column)
-    move_array = piece_move_array(piece)
-    after_move_array = coordinates_after_move(piece: piece, array: move_array)
-    in_bound_moves = filter_out_of_bounds(after_move_array)
-    filter_legit_moves(piece: piece, in_bound_moves: in_bound_moves)
+    all_moves = piece.all_moves
+    after_move_hash = coordinates_after_move(piece: piece, hash: all_moves)
+    in_bound_moves = filter_out_of_bounds(after_move_hash)
+    in_bound_moves = filter_pawn_moves(pawn: piece, hash: in_bound_moves) if piece.is_a? Pawn
+    filter_blocked_path(piece: piece, move_hash: in_bound_moves)
   end
 
   # private
@@ -369,37 +387,77 @@ class ChessBoard < Board
     end
   end
 
-  def piece_move_array(piece)
-    if piece.is_a? Pawn
-      filter_pawn_enemy_diag(piece)
-    else
-      piece.all_moves
+  def pawn_delete_diagonal(pawn:, move_hash:)
+    move_hash.each do |direction, moves|
+      next unless pawn.diagonals.include?(direction)
+
+      move = moves[0] # diagonal only one moves
+      moves.delete(move) unless enemy?(piece: pawn, row: move[0], column: move[1])
     end
+    move_hash
   end
 
-  def filter_pawn_enemy_diag(pawn)
-    moves = pawn.all_moves.dup
-    pawn.all_moves.each do |move|
-      moves.delete(move) if pawn.diagonal?(move) && !enemy?(piece: pawn, row: move[0], column: move[1])
+  def pawn_delete_two_steps(pawn:, move_hash:)
+    move_hash.each do |direction, moves|
+      next unless pawn.main_direction == direction
+
+      moves.each do |move|
+        next unless pawn.two_step.include?(move)
+
+        moves.delete(move) unless empty?(row: move[0], column: move[1])
+      end
     end
-    moves
+    move_hash
   end
 
-  def coordinates_after_move(piece:, array:)
-    move_array = array.dup
-    move_array.each do |move|
-      move[0] += piece.row
-      move[1] += piece.column
+  def filter_pawn_moves(pawn:, hash:)
+    hash = pawn_delete_diagonal(pawn: pawn, move_hash: hash)
+    pawn_delete_two_steps(pawn: pawn, move_hash: hash)
+  end
+
+  def coordinates_after_move(piece:, hash:)
+    after_move_hash = {}
+    hash.each do |direction, moves|
+      mapped_array = []
+      moves.each do |move|
+        new_coordinate = []
+        new_coordinate[0] = move[0] + piece.row
+        new_coordinate[1] = move[1] + piece.column
+        mapped_array.push(new_coordinate)
+      end
+      after_move_hash[direction] = mapped_array
     end
-    move_array
+    after_move_hash
   end
 
-  def filter_out_of_bounds(move_array)
-    move_array.select { |move| move.all? { |i| i >= 0 && i < size } }
+  def filter_out_of_bounds(move_hash)
+    move_hash.each_value do |moves|
+      moves.select! { |move| move.all? { |i| i >= 0 && i < size } }
+    end
+    move_hash
   end
 
-  def filter_legit_moves(piece:, in_bound_moves:)
-    in_bound_moves.select { |move| legit_move?(piece: piece, row: move[0], column: move[1]) }
+  def filter_blocked_path(piece:, move_hash:)
+    move_hash.each do |direction, moves|
+      next if moves.empty?
+
+      index = find_end_index(piece: piece, moves: moves)
+      filtered = moves[0, index + 1]
+      move_hash[direction] = filtered
+    end
+    move_hash
+  end
+
+  def find_end_index(piece:, moves:)
+    moves.each do |move|
+      return moves.index(move) if empty?(row: move[0], column: move[1]) && moves.last == move
+
+      if enemy?(piece: piece, row: move[0], column: move[1])
+        return moves.index(move)
+      elsif ally?(piece: piece, row: move[0], column: move[1])
+        return moves.index(move) - 1
+      end
+    end
   end
 
   def empty?(row:, column:)
@@ -419,12 +477,11 @@ class ChessBoard < Board
     tenant.color != piece.color
   end
 
-  def legit_move?(piece:, row:, column:)
-    if empty?(row: row, column: column) || enemy?(piece: piece, row: row, column: column)
-      true
-    else
-      false
-    end
+  def ally?(piece:, row:, column:)
+    return false if empty?(row: row, column: column)
+
+    tenant = select(row: row, column: column)
+    tenant.color == piece.color
   end
 end
 
@@ -440,12 +497,12 @@ class BoardDisplay
     '+---'.colorize(mode: :bold)
   end
 
-  def row_str(row:, column:)
-    element = board.select(row: row, column: column)
-    '|'.colorize(mode: :bold) + " #{occupied?(element)} "
+  def row_str(to_display:, row:, column:)
+    element = to_display.select(row: row, column: column)
+    '|'.colorize(mode: :bold) + " #{empty_or_piece(element)} "
   end
 
-  def occupied?(element)
+  def empty_or_piece(element)
     if element.nil?
       ' '
     else
@@ -458,10 +515,10 @@ class BoardDisplay
     str.prepend('  ')
   end
 
-  def row(row_num, column_num = board.size)
+  def row(to_display:, row_num:, column_num:)
     str = "#{row_num + 1} "
     column_num.times do |column|
-      str += row_str(row: row_num, column: column)
+      str += row_str(to_display: to_display, row: row_num, column: column)
     end
     str += '|'.colorize(mode: :bold)
   end
@@ -474,19 +531,52 @@ class BoardDisplay
     str.prepend('    ')
   end
 
-  def show_board(board = @board)
-    last = board.size - 1
-    column_num = board.size
+  def show_board(to_display = @board)
+    last = to_display.size - 1
+    column_num = to_display.size
     last.downto(0) do |row_num|
       puts seperator(column_num) if row_num == 7
-      puts row(row_num, column_num)
+      puts row(to_display: to_display, row_num: row_num, column_num: column_num)
       puts seperator(column_num)
       puts column_index_row if row_num.zero?
+    end
+  end
+
+  def show_moves(row:, column:)
+    board_copy = copy(board)
+    move_array = board.moves(row: row, column: column)
+    turn_enemies_red(board_copy, move_array)
+    add_dots(board_copy, move_array)
+    show_board(board_copy)
+  end
+
+  def copy(board)
+    # deep copy
+    serialized_board = Marshal.dump(board)
+    Marshal.load(serialized_board)
+  end
+
+  def add_dots(board, move_array)
+    move_array = move_array.select { |move| board.empty?(row: move[0], column: move[1]) }
+    move_array.each do |move|
+      board.insert(board_piece: "\u25cf", row: move[0], column: move[1])
+    end
+  end
+
+  def turn_enemies_red(board, move_array)
+    move_array = move_array.reject { |move| board.empty?(row: move[0], column: move[1]) }
+    move_array.each do |move|
+      next if move.empty?
+
+      piece = board.select(row: move[0], column: move[1])
+      initials = piece.initials
+      str = initials.colorize(:red)
+      board.insert(board_piece: str, row: move[0], column: move[1])
     end
   end
 end
 
 board = ChessBoard.new
 display = BoardDisplay.new(board)
-queen = Queen.new(color: 'yellow', row: 0, column: 3)
-display.show_board
+display.show_moves(row: 0, column: 1)
+
