@@ -613,12 +613,64 @@ end
 
 # emulates someone that organises the game, takes in input etc.
 class ChessIO
+  attr_reader :display, :board
+
+  def initialize(board)
+    @board = board
+    @display = BoardDisplay.new(board)
+  end
+
   def intro
     puts 'Welcome to Chess'
   end
 
   def instructions
     puts "To select a piece, enter coordinates. For example, 'a2' for yellow Knight."
+  end
+
+  def announce_colors(player_array)
+    player_one = player_array[0]
+    player_two = player_array[1]
+    puts "#{player_one.name}, you are yellow. #{player_two.name}, you are blue."
+  end
+
+  def announce_turn(player)
+    puts "#{player.name}, it is your turn."
+  end
+
+  def ask_and_confirm(player)
+    confirm = 'n'
+    until confirm == 'y'
+      input = ask_piece(player)
+      coordinates = display.translate(input)
+      display.show_moves(row: coordinates[0], column: coordinates[1])
+      confirm = ask('confirm')
+    end
+    input
+  end
+
+  def ask_move(piece_input)
+    move_input = ask('move')
+    move_input = check_valid_input(input: move_input, ask_method: 'move')
+    check_piece_movable(piece_input: piece_input, move_input: move_input)
+  end
+
+  def ask_name
+    ask('name')
+  end
+
+  # private
+  def ask_piece(player)
+    input = ask('piece_input')
+    input = check_valid_input(input: input, ask_method: 'piece_input')
+    input = check_input_piece(input)
+    input = check_input_enemy(player: player, input: input)
+    check_input_moves(player: player, input: input)
+  end
+
+  def ask(type)
+    print ask_prompts(type)
+    gets.chomp
   end
 
   def ask_prompts(type)
@@ -628,19 +680,12 @@ class ChessIO
       'move' => 'Enter the destination coordinates: ' }[type]
   end
 
-  def ask(type)
-    print ask_prompts(type)
-    gets.chomp
-  end
-
-  def announce_turn(player)
-    puts "#{player.name}, it is your turn."
-  end
-
-  def announce_colors(player_array)
-    player_one = player_array[0]
-    player_two = player_array[1]
-    puts "#{player_one.name}, you are yellow. #{player_two.name}, you are blue."
+  def check_valid_input(input:, ask_method:)
+    until display.valid_input?(input)
+      error('input')
+      input = ask(ask_method)
+    end
+    input
   end
 
   def error(type)
@@ -651,85 +696,56 @@ class ChessIO
             'not_movable' => 'The piece cannot move there. Try again below'}[type]
     puts str
   end
-end
 
-# the game
-class Chess
-  attr_accessor :board
-  attr_reader :io, :players, :display
-
-  def initialize
-    @board = ChessBoard.new
-    @display = BoardDisplay.new(board)
-    @io = ChessIO.new
-    @players = add_players
-  end
-
-  def colors
-    %w[yellow blue]
-  end
-
-  def add_players
-    color_arr = colors
-    players = []
-    2.times do
-      name = io.ask('name')
-      color = color_arr.delete(color_arr.sample)
-      player = Player.new(name: name, color: color)
-      players.push(player)
-    end
-    sort_players(players)
-  end
-
-  def play
-    io.intro
-    io.instructions
-    io.announce_colors(players)
-    play_round
-  end
-
-  def play_round
-    players.each do |player|
-      display.show_board
-      io.announce_turn(player)
-      input = ask_and_confirm(player)
-      move_input = ask_move(input)
-    end
-  end
-
-  def ask_and_confirm(player)
-    confirm = 'n'
-    until confirm == 'y'
-      input = ask_piece(player)
-      coordinates = display.translate(input)
-      display.show_moves(row: coordinates[0], column: coordinates[1])
-      confirm = io.ask('confirm')
+  def check_input_piece(input)
+    until input_piece?(input)
+      error('piece')
+      input = ask('piece_input')
+      input = check_valid_input(input: input, ask_method: 'piece_input')
     end
     input
   end
 
-  def sort_players(player_array)
-    player_array.sort_by(&:color).reverse!
+  def input_piece?(input)
+    input_arr = display.translate(input)
+    !board.empty?(row: input_arr[0], column: input_arr[1])
   end
 
-  def ask_piece(player)
-    input = io.ask('piece_input')
-    input = check_valid_input(input: input, ask_method: 'piece_input')
-    input = check_input_piece(input)
-    input = check_input_enemy(player: player, input: input)
-    check_input_moves(player: player, input: input)
+  def check_input_enemy(player:, input:)
+    while input_enemy?(player: player, input: input)
+      error('enemy')
+      input = ask('piece_input')
+      input = check_valid_input(input: input, ask_method: 'piece_input')
+      input = check_input_piece(input)
+    end
+    input
   end
 
-  def ask_move(piece_input)
-    move_input = io.ask('move')
-    move_input = check_valid_input(input: move_input, ask_method: 'move')
-    check_piece_movable(piece_input: piece_input, move_input: move_input)
+  def input_enemy?(player:, input:)
+    input_arr = display.translate(input)
+    board.enemy?(obj: player, row: input_arr[0], column: input_arr[1])
+  end
+
+  def check_input_moves(player:, input:)
+    until piece_moves?(input)
+      error('no_moves')
+      input = ask('piece_input')
+      input = check_valid_input(input: input, ask_method: 'piece_input')
+      input = check_input_piece(input)
+      input = check_input_enemy(player: player, input: input)
+    end
+    input
+  end
+
+  def piece_moves?(input)
+    input_arr = display.translate(input)
+    !board.moves(row: input_arr[0], column: input_arr[1]).empty?
   end
 
   def check_piece_movable(piece_input:, move_input:)
     until movable?(piece_input: piece_input, move_input: move_input)
-      io.error('not_movable')
-      move_input = io.ask('move')
+      error('not_movable')
+      move_input = ask('move')
       move_input = check_valid_input(input: move_input, ask_method: 'move')
     end
     move_input
@@ -744,58 +760,56 @@ class Chess
     end
     false
   end
+end
 
-  def check_input_moves(player:, input:)
-    until piece_moves?(input)
-      io.error('no_moves')
-      input = io.ask('piece_input')
-      input = check_valid_input(input: input, ask_method: 'piece_input')
-      input = check_input_piece(input)
-      input = check_input_enemy(player: player, input: input)
+# the game
+class Chess
+  attr_accessor :board
+  attr_reader :io, :players, :display
+
+  def initialize
+    @board = ChessBoard.new
+    @display = BoardDisplay.new(board)
+    @io = ChessIO.new(board)
+    @players = add_players
+  end
+
+  def play
+    io.intro
+    io.instructions
+    io.announce_colors(players)
+    play_round
+  end
+
+  # private
+
+  def play_round
+    players.each do |player|
+      display.show_board
+      io.announce_turn(player)
+      input = io.ask_and_confirm(player)
+      move_input = io.ask_move(input)
     end
-    input
   end
 
-  def check_input_enemy(player:, input:)
-    while input_enemy?(player: player, input: input)
-      io.error('enemy')
-      input = io.ask('piece_input')
-      input = check_valid_input(input: input, ask_method: 'piece_input')
-      input = check_input_piece(input)
+  def add_players
+    color_arr = colors
+    players = []
+    2.times do
+      name = io.ask_name
+      color = color_arr.delete(color_arr.sample)
+      player = Player.new(name: name, color: color)
+      players.push(player)
     end
-    input
+    sort_players(players)
   end
 
-  def check_input_piece(input)
-    until input_piece?(input)
-      io.error('piece')
-      input = io.ask('piece_input')
-      input = check_valid_input(input: input, ask_method: 'piece_input')
-    end
-    input
+  def colors
+    %w[yellow blue]
   end
 
-  def check_valid_input(input:, ask_method:)
-    until display.valid_input?(input)
-      io.error('input')
-      input = io.ask(ask_method)
-    end
-    input
-  end
-
-  def input_piece?(input)
-    input_arr = display.translate(input)
-    !board.empty?(row: input_arr[0], column: input_arr[1])
-  end
-
-  def input_enemy?(player:, input:)
-    input_arr = display.translate(input)
-    board.enemy?(obj: player, row: input_arr[0], column: input_arr[1])
-  end
-
-  def piece_moves?(input)
-    input_arr = display.translate(input)
-    !board.moves(row: input_arr[0], column: input_arr[1]).empty?
+  def sort_players(player_array)
+    player_array.sort_by(&:color).reverse!
   end
 end
 
