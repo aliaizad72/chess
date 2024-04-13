@@ -621,19 +621,20 @@ class ChessIO
     puts "To select a piece, enter coordinates. For example, 'a2' for yellow Knight."
   end
 
-  def ask_name
-    print 'Enter your name: '
+  def ask_prompts(type)
+    { 'name' => 'Enter your name: ',
+      'piece' => "Enter the piece you want to move: ",
+      'confirm' => 'Is this the piece you wanted to select? y/n: ',
+      'move' => 'Enter the destination coordinates: ' }[type]
+  end
+
+  def ask(type)
+    print ask_prompts(type)
     gets.chomp
   end
 
-  def ask_piece(player)
-    print "#{player.name}, enter the piece you want to move: "
-    gets.chomp
-  end
-
-  def ask_confirm
-    print "Is this the piece you wanted to select? y/n: "
-    gets.chomp
+  def announce_turn(player)
+    puts "#{player.name}, it is your turn."
   end
 
   def announce_colors(player_array)
@@ -671,7 +672,7 @@ class Chess
     color_arr = colors
     players = []
     2.times do
-      name = io.ask_name
+      name = io.ask('name')
       color = color_arr.delete(color_arr.sample)
       player = Player.new(name: name, color: color)
       players.push(player)
@@ -689,6 +690,7 @@ class Chess
   def play_round
     players.each do |player|
       display.show_board
+      io.announce_turn(player)
       confirm = ask_and_confirm(player)
       ask_and_confirm(player) until confirm == 'y'
     end
@@ -698,7 +700,7 @@ class Chess
     input = ask_piece(player)
     coordinates = display.translate(input)
     display.show_moves(row: coordinates[0], column: coordinates[1])
-    io.ask_confirm
+    io.ask('confirm')
   end
 
   def sort_players(player_array)
@@ -706,19 +708,27 @@ class Chess
   end
 
   def ask_piece(player)
-    input = io.ask_piece(player)
-    input = check_valid_input(player: player, input: input)
-    input = check_input_piece(player: player, input: input)
+    input = io.ask('piece')
+    input = check_valid_input(input)
+    input = check_input_piece(input)
     input = check_input_enemy(player: player, input: input)
     check_input_moves(player: player, input: input)
+  end
+
+  def ask_move(_player)
+    input = io.ask_move
+    until display.valid_input?(input)
+      io.error('input')
+      input = io.ask_move
+    end
   end
 
   def check_input_moves(player:, input:)
     until piece_moves?(input)
       io.error('no_moves')
-      input = io.ask_piece(player)
-      input = check_valid_input(player: player, input: input)
-      input = check_input_piece(player: player, input: input)
+      input = io.ask('piece')
+      input = check_valid_input(input)
+      input = check_input_piece(input)
       input = check_input_enemy(player: player, input: input)
     end
     input
@@ -727,26 +737,26 @@ class Chess
   def check_input_enemy(player:, input:)
     while input_enemy?(player: player, input: input)
       io.error('enemy')
-      input = io.ask_piece(player)
-      input = check_valid_input(player: player, input: input)
-      input = check_input_piece(player: player, input: input)
+      input = io.ask('piece')
+      input = check_valid_input(input)
+      input = check_input_piece(input)
     end
     input
   end
 
-  def check_input_piece(player:, input:)
+  def check_input_piece(input)
     until input_piece?(input)
       io.error('piece')
-      input = io.ask_piece(player)
-      input = check_valid_input(player: player, input: input)
+      input = io.ask('piece')
+      input = check_valid_input(input)
     end
     input
   end
 
-  def check_valid_input(player:, input:)
+  def check_valid_input(input)
     until display.valid_input?(input)
       io.error('input')
-      input = io.ask_piece(player)
+      input = io.ask('piece')
     end
     input
   end
