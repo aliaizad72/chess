@@ -623,7 +623,7 @@ class ChessIO
 
   def ask_prompts(type)
     { 'name' => 'Enter your name: ',
-      'piece' => "Enter the piece you want to move: ",
+      'piece_input' => 'Enter the piece you want to move: ',
       'confirm' => 'Is this the piece you wanted to select? y/n: ',
       'move' => 'Enter the destination coordinates: ' }[type]
   end
@@ -647,7 +647,8 @@ class ChessIO
     str = { 'input' => 'The input given was invalid. Try again below.',
             'piece' => 'The input given has nothing on it. Try again below.',
             'enemy' => 'That is not yours to move. Try again below.',
-            'no_moves' => 'This piece currently has no moves. Try again below.' }[type]
+            'no_moves' => 'This piece currently has no moves. Try again below.',
+            'not_movable' => 'The piece cannot move there. Try again below'}[type]
     puts str
   end
 end
@@ -692,6 +693,7 @@ class Chess
       display.show_board
       io.announce_turn(player)
       input = ask_and_confirm(player)
+      move_input = ask_move(input)
     end
   end
 
@@ -711,26 +713,43 @@ class Chess
   end
 
   def ask_piece(player)
-    input = io.ask('piece')
-    input = check_valid_input(input: input, ask_method: 'piece')
+    input = io.ask('piece_input')
+    input = check_valid_input(input: input, ask_method: 'piece_input')
     input = check_input_piece(input)
     input = check_input_enemy(player: player, input: input)
     check_input_moves(player: player, input: input)
   end
 
-  def ask_move(_player)
-    input = io.ask_move
-    until display.valid_input?(input)
-      io.error('input')
-      input = io.ask_move
+  def ask_move(piece_input)
+    move_input = io.ask('move')
+    move_input = check_valid_input(input: move_input, ask_method: 'move')
+    check_piece_movable(piece_input: piece_input, move_input: move_input)
+  end
+
+  def check_piece_movable(piece_input:, move_input:)
+    until movable?(piece_input: piece_input, move_input: move_input)
+      io.error('not_movable')
+      move_input = io.ask('move')
+      move_input = check_valid_input(input: move_input, ask_method: 'move')
     end
+    move_input
+  end
+
+  def movable?(piece_input:, move_input:)
+    piece_coordinates = display.translate(piece_input)
+    move_coordinates = display.translate(move_input)
+    move_hash = board.moves(row: piece_coordinates[0], column: piece_coordinates[1])
+    move_hash.each_value do |moves|
+      return true if moves.include?(move_coordinates)
+    end
+    false
   end
 
   def check_input_moves(player:, input:)
     until piece_moves?(input)
       io.error('no_moves')
-      input = io.ask('piece')
-      input = check_valid_input(input: input, ask_method: 'piece')
+      input = io.ask('piece_input')
+      input = check_valid_input(input: input, ask_method: 'piece_input')
       input = check_input_piece(input)
       input = check_input_enemy(player: player, input: input)
     end
@@ -740,8 +759,8 @@ class Chess
   def check_input_enemy(player:, input:)
     while input_enemy?(player: player, input: input)
       io.error('enemy')
-      input = io.ask('piece')
-      input = check_valid_input(input: input, ask_method: 'piece')
+      input = io.ask('piece_input')
+      input = check_valid_input(input: input, ask_method: 'piece_input')
       input = check_input_piece(input)
     end
     input
@@ -750,8 +769,8 @@ class Chess
   def check_input_piece(input)
     until input_piece?(input)
       io.error('piece')
-      input = io.ask('piece')
-      input = check_valid_input(input: input, ask_method: 'piece')
+      input = io.ask('piece_input')
+      input = check_valid_input(input: input, ask_method: 'piece_input')
     end
     input
   end
