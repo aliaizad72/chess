@@ -317,6 +317,10 @@ class SecondPlayerPawn < Pawn
        south_west]
   end
 
+  def main_direction
+    :south
+  end
+
   def two_step
     [[-2, 0]]
   end
@@ -511,7 +515,7 @@ class BoardDisplay
   # translate input on the grid to board format
   def translate(input)
     input_arr = input.split('')
-    y = input_arr[0]
+    y = input_arr[0].downcase
     x = input_arr[1]
     [x.ord - 49, y.ord - 97]
   end
@@ -520,7 +524,7 @@ class BoardDisplay
     return false unless input.length == 2
 
     input_arr = input.split('')
-    input_arr[0].between?('a', 'h') && input_arr[1].between?('1', '8')
+    input_arr[0].downcase.between?('a', 'h') && input_arr[1].between?('1', '8')
   end
 
   # private
@@ -610,7 +614,11 @@ end
 # emulates someone that organises the game, takes in input etc.
 class ChessIO
   def intro
-    'Welcome to Chess'
+    puts 'Welcome to Chess'
+  end
+
+  def instructions
+    puts "To select a piece, enter coordinates. For example, 'a2' for yellow Knight."
   end
 
   def ask_name
@@ -618,16 +626,28 @@ class ChessIO
     gets.chomp
   end
 
-  def ask_piece
-    print 'Enter the piece you want to move: '
+  def ask_piece(player)
+    print "#{player.name}, enter the piece you want to move: "
     gets.chomp
   end
 
+  def ask_confirm
+    print "Is this the piece you wanted to select? y/n: "
+    gets.chomp
+  end
+
+  def announce_colors(player_array)
+    player_one = player_array[0]
+    player_two = player_array[1]
+    puts "#{player_one.name}, you are yellow. #{player_two.name}, you are blue."
+  end
+
   def error(type)
-    { 'input' => 'The input given was invalid. Try again below.',
-      'piece' => 'The input given has nothing on it. Try again below.',
-      'enemy' => 'That is not yours to move. Try again below.',
-      'no_moves' => 'This piece currently has no moves. Try again below.' }[type]
+    str = { 'input' => 'The input given was invalid. Try again below.',
+            'piece' => 'The input given has nothing on it. Try again below.',
+            'enemy' => 'That is not yours to move. Try again below.',
+            'no_moves' => 'This piece currently has no moves. Try again below.' }[type]
+    puts str
   end
 end
 
@@ -659,24 +679,46 @@ class Chess
     sort_players(players)
   end
 
+  def play
+    io.intro
+    io.instructions
+    io.announce_colors(players)
+    play_round
+  end
+
+  def play_round
+    players.each do |player|
+      display.show_board
+      confirm = ask_and_confirm(player)
+      ask_and_confirm(player) until confirm == 'y'
+    end
+  end
+
+  def ask_and_confirm(player)
+    input = ask_piece(player)
+    coordinates = display.translate(input)
+    display.show_moves(row: coordinates[0], column: coordinates[1])
+    io.ask_confirm
+  end
+
   def sort_players(player_array)
     player_array.sort_by(&:color).reverse!
   end
 
   def ask_piece(player)
-    input = io.ask_piece
-    input = check_valid_input(input)
-    input = check_input_piece(input)
+    input = io.ask_piece(player)
+    input = check_valid_input(player: player, input: input)
+    input = check_input_piece(player: player, input: input)
     input = check_input_enemy(player: player, input: input)
     check_input_moves(player: player, input: input)
   end
 
   def check_input_moves(player:, input:)
     until piece_moves?(input)
-      puts io.error('no_moves')
-      input = io.ask_piece
-      input = check_valid_input(input)
-      input = check_input_piece(input)
+      io.error('no_moves')
+      input = io.ask_piece(player)
+      input = check_valid_input(player: player, input: input)
+      input = check_input_piece(player: player, input: input)
       input = check_input_enemy(player: player, input: input)
     end
     input
@@ -684,27 +726,27 @@ class Chess
 
   def check_input_enemy(player:, input:)
     while input_enemy?(player: player, input: input)
-      puts io.error('enemy')
-      input = io.ask_piece
-      input = check_valid_input(input)
-      input = check_input_piece(input)
+      io.error('enemy')
+      input = io.ask_piece(player)
+      input = check_valid_input(player: player, input: input)
+      input = check_input_piece(player: player, input: input)
     end
     input
   end
 
-  def check_input_piece(input)
+  def check_input_piece(player:, input:)
     until input_piece?(input)
-      puts io.error('piece')
-      input = io.ask_piece
-      input = check_valid_input(input)
+      io.error('piece')
+      input = io.ask_piece(player)
+      input = check_valid_input(player: player, input: input)
     end
     input
   end
 
-  def check_valid_input(input)
+  def check_valid_input(player:, input:)
     until display.valid_input?(input)
-      puts io.error('input')
-      input = io.ask_piece
+      io.error('input')
+      input = io.ask_piece(player)
     end
     input
   end
@@ -726,7 +768,4 @@ class Chess
 end
 
 chess = Chess.new
-player = chess.players.sample
-chess.display.show_board
-p player
-chess.ask_piece(player)
+chess.play
