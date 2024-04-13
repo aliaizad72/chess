@@ -441,7 +441,8 @@ class ChessBoard < Board
 
   def moves(row:, column:)
     piece = select(row: row, column: column)
-    piece.filter_moves(self)
+    move_hash = piece.filter_moves(self)
+    move_hash.reject { |_direction, moves| moves.empty? }
   end
 
   def insert_pieces
@@ -625,7 +626,8 @@ class ChessIO
   def error(type)
     { 'input' => 'The input given was invalid. Try again below.',
       'piece' => 'The input given has nothing on it. Try again below.',
-      'enemy' => 'That is not yours to move. Try again below.' }[type]
+      'enemy' => 'That is not yours to move. Try again below.',
+      'no_moves' => 'This piece currently has no moves. Try again below.' }[type]
   end
 end
 
@@ -654,14 +656,30 @@ class Chess
       player = Player.new(name: name, color: color)
       players.push(player)
     end
-    players
+    sort_players(players)
+  end
+
+  def sort_players(player_array)
+    player_array.sort_by(&:color).reverse!
   end
 
   def ask_piece(player)
     input = io.ask_piece
     input = check_valid_input(input)
     input = check_input_piece(input)
-    check_input_enemy(player: player, input: input)
+    input = check_input_enemy(player: player, input: input)
+    check_input_moves(player: player, input: input)
+  end
+
+  def check_input_moves(player:, input:)
+    until piece_moves?(input)
+      puts io.error('no_moves')
+      input = io.ask_piece
+      input = check_valid_input(input)
+      input = check_input_piece(input)
+      input = check_input_enemy(player: player, input: input)
+    end
+    input
   end
 
   def check_input_enemy(player:, input:)
@@ -700,10 +718,15 @@ class Chess
     input_arr = display.translate(input)
     board.enemy?(obj: player, row: input_arr[0], column: input_arr[1])
   end
+
+  def piece_moves?(input)
+    input_arr = display.translate(input)
+    !board.moves(row: input_arr[0], column: input_arr[1]).empty?
+  end
 end
 
 chess = Chess.new
-chess.display.show_board
 player = chess.players.sample
-p player.color
+chess.display.show_board
+p player
 chess.ask_piece(player)
