@@ -227,6 +227,20 @@ class King < FirstMovePiece
   def initials
     'K'
   end
+
+  def knight_attack
+    { knight: [[1, 2], [1, -2], [2, 1], [2, -1], [-1, 2], [-1, -2], [-2, 1], [-2, -1]] }
+  end
+
+  def attacked_vectors
+    all_vectors = {}
+    move_directions.each do |direction|
+      vector = base_vectors(direction)
+      vectors = max_range_vectors(vector, 7)
+      all_vectors[direction] = vectors
+    end
+    all_vectors.merge(knight_attack)
+  end
 end
 
 # chess piece Pawn
@@ -813,5 +827,6 @@ class Chess
   end
 end
 
-chess = Chess.new
-chess.play
+# chess = Chess.new
+king = King.new(color: 'yellow', row: 0, column: 4)
+p king.attacked_vectors
