@@ -691,16 +691,19 @@ class Chess
     players.each do |player|
       display.show_board
       io.announce_turn(player)
-      confirm = ask_and_confirm(player)
-      ask_and_confirm(player) until confirm == 'y'
+      input = ask_and_confirm(player)
     end
   end
 
   def ask_and_confirm(player)
-    input = ask_piece(player)
-    coordinates = display.translate(input)
-    display.show_moves(row: coordinates[0], column: coordinates[1])
-    io.ask('confirm')
+    confirm = 'n'
+    until confirm == 'y'
+      input = ask_piece(player)
+      coordinates = display.translate(input)
+      display.show_moves(row: coordinates[0], column: coordinates[1])
+      confirm = io.ask('confirm')
+    end
+    input
   end
 
   def sort_players(player_array)
@@ -709,7 +712,7 @@ class Chess
 
   def ask_piece(player)
     input = io.ask('piece')
-    input = check_valid_input(input)
+    input = check_valid_input(input: input, ask_method: 'piece')
     input = check_input_piece(input)
     input = check_input_enemy(player: player, input: input)
     check_input_moves(player: player, input: input)
@@ -727,7 +730,7 @@ class Chess
     until piece_moves?(input)
       io.error('no_moves')
       input = io.ask('piece')
-      input = check_valid_input(input)
+      input = check_valid_input(input: input, ask_method: 'piece')
       input = check_input_piece(input)
       input = check_input_enemy(player: player, input: input)
     end
@@ -738,7 +741,7 @@ class Chess
     while input_enemy?(player: player, input: input)
       io.error('enemy')
       input = io.ask('piece')
-      input = check_valid_input(input)
+      input = check_valid_input(input: input, ask_method: 'piece')
       input = check_input_piece(input)
     end
     input
@@ -748,15 +751,15 @@ class Chess
     until input_piece?(input)
       io.error('piece')
       input = io.ask('piece')
-      input = check_valid_input(input)
+      input = check_valid_input(input: input, ask_method: 'piece')
     end
     input
   end
 
-  def check_valid_input(input)
+  def check_valid_input(input:, ask_method:)
     until display.valid_input?(input)
       io.error('input')
-      input = io.ask('piece')
+      input = io.ask(ask_method)
     end
     input
   end
