@@ -623,7 +623,9 @@ class ChessIO
   end
 
   def error(type)
-    { 'input' => 'The input given was invalid. Try again below.' }[type]
+    { 'input' => 'The input given was invalid. Try again below.',
+      'piece' => 'The input given has nothing on it. Try again below.',
+      'enemy' => 'That is not yours to move. Try again below.' }[type]
   end
 end
 
@@ -655,8 +657,33 @@ class Chess
     players
   end
 
-  def ask_piece
+  def ask_piece(player)
     input = io.ask_piece
+    input = check_valid_input(input)
+    input = check_input_piece(input)
+    check_input_enemy(player: player, input: input)
+  end
+
+  def check_input_enemy(player:, input:)
+    while input_enemy?(player: player, input: input)
+      puts io.error('enemy')
+      input = io.ask_piece
+      input = check_valid_input(input)
+      input = check_input_piece(input)
+    end
+    input
+  end
+
+  def check_input_piece(input)
+    until input_piece?(input)
+      puts io.error('piece')
+      input = io.ask_piece
+      input = check_valid_input(input)
+    end
+    input
+  end
+
+  def check_valid_input(input)
     until display.valid_input?(input)
       puts io.error('input')
       input = io.ask_piece
@@ -664,16 +691,19 @@ class Chess
     input
   end
 
-  def input_piece?(input_str)
-    input_arr = display.translate(input_str)
+  def input_piece?(input)
+    input_arr = display.translate(input)
     !board.empty?(row: input_arr[0], column: input_arr[1])
   end
 
-  def input_enemy?(player:, input_str:)
-    input_arr = display.translate(input_str)
+  def input_enemy?(player:, input:)
+    input_arr = display.translate(input)
     board.enemy?(obj: player, row: input_arr[0], column: input_arr[1])
   end
 end
 
 chess = Chess.new
-chess.ask_piece
+chess.display.show_board
+player = chess.players.sample
+p player.color
+chess.ask_piece(player)
