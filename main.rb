@@ -60,8 +60,7 @@ class Piece
     initials.colorize(color.to_sym)
   end
 
-  def moves_sums
-    hash = all_moves
+  def moves_sums(hash = all_moves)
     hash.each_value do |moves|
       moves.each do |move|
         move[0] = move[0] + row
@@ -241,6 +240,21 @@ class King < FirstMovePiece
     end
     all_vectors.merge(knight_attack)
   end
+
+  def attacked_vectors_sums
+    moves_sums(attacked_vectors)
+  end
+
+  def possible_attacked_coordinates(board)
+    filter_in_bounds(board: board, move_hash: attacked_vectors_sums)
+  end
+
+  def knight_attack?(board)
+    possible_attacked_coordinates(board)[:knight].each do |move|
+      return true if board.enemy?(obj: self, row: move[0], column: move[1])
+    end
+    false
+  end
 end
 
 # chess piece Pawn
@@ -267,8 +281,7 @@ class Pawn < FirstMovePiece
     # implement this in subclass
   end
 
-  def filter_moves(board)
-    move_hash = moves_sums
+  def filter_moves(board, move_hash = moves_sums)
     move_hash = filter_diagonals(board: board, move_hash: move_hash)
     move_hash = filter_two_steps(board: board, move_hash: move_hash)
     move_hash = filter_in_bounds(board: board, move_hash: move_hash)
@@ -466,6 +479,10 @@ class ChessBoard < Board
   def insert_pieces
     insert_set(Yellow.new)
     insert_set(Blue.new)
+    # king = King.new(color: 'yellow', row: 0, column: 4)
+    # knight = Knight.new(color: 'blue', row: 2, column: 5)
+    # insert(board_piece: king, row: king.row, column: king.column)
+    # insert(board_piece: knight, row: knight.row, column: knight.column)
   end
 
   def insert_set(chess_set_obj)
@@ -827,6 +844,8 @@ class Chess
   end
 end
 
-# chess = Chess.new
-king = King.new(color: 'yellow', row: 0, column: 4)
-p king.attacked_vectors
+chess = Chess.new
+king = chess.board.select(row: 0, column: 4)
+chess.display.show_board
+board = chess.board
+p king.knight_attack?(board)
