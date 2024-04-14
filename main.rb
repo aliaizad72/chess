@@ -123,6 +123,17 @@ class Piece
     1
   end
 
+  def opposite_direction(direction)
+    { north: :south,
+      north_east: :south_west,
+      east: :west,
+      south_east: :north_west,
+      south: :north,
+      south_west: :north_east,
+      west: :east,
+      north_west: :south_east }[direction]
+  end
+
   def base_vectors(direction)
     { north: [1, 0],
       north_east: [1, 1],
@@ -249,11 +260,58 @@ class King < FirstMovePiece
     filter_in_bounds(board: board, move_hash: attacked_vectors_sums)
   end
 
+  def filter_enemy_in_path(board)
+    hash = possible_attacked_coordinates(board)
+    hash.delete(:knight) # knight is not affected by path attack
+    hash.each do |direction, moves|
+      next if moves.empty?
+
+      hash[direction] = if enemy_in_path?(board: board, moves: moves)
+                          moves[find_enemy_index(board: board, moves: moves)]
+                        else
+                          []
+                        end
+    end
+    hash
+  end
+
+  def enemy_in_path?(board:, moves:)
+    moves.each do |move|
+      return true if board.enemy?(obj: self, row: move[0], column: move[1])
+
+      return false if board.ally?(piece: self, row: move[0], column: move[1])
+    end
+    false
+  end
+
+  def find_enemy_index(board:, moves:)
+    moves.each do |move|
+      return moves.index(move) if board.enemy?(obj: self, row: move[0], column: move[1])
+    end
+  end
+
+  def non_knight_attack?(board)
+    hash = filter_enemy_in_path(board)
+    hash = hash.reject { |_direction, moves| moves.empty? }
+    king_coordinates = [row, column]
+    hash.each do |direction, coordinates|
+      piece = board.select(row: coordinates[0], column: coordinates[1])
+      piece_moves = piece.filter_moves(board)
+      attack_direction = opposite_direction(direction)
+      return true if piece_moves[attack_direction].include?(king_coordinates)
+    end
+    false
+  end
+
   def knight_attack?(board)
     possible_attacked_coordinates(board)[:knight].each do |move|
       return true if board.enemy?(obj: self, row: move[0], column: move[1])
     end
     false
+  end
+
+  def checked?(board)
+    non_knight_attack?(board) || knight_attack?(board)
   end
 end
 
@@ -477,12 +535,22 @@ class ChessBoard < Board
   end
 
   def insert_pieces
-    insert_set(Yellow.new)
-    insert_set(Blue.new)
-    # king = King.new(color: 'yellow', row: 0, column: 4)
-    # knight = Knight.new(color: 'blue', row: 2, column: 5)
-    # insert(board_piece: king, row: king.row, column: king.column)
-    # insert(board_piece: knight, row: knight.row, column: knight.column)
+    # insert_set(Yellow.new)
+    # insert_set(Blue.new)
+    king = King.new(color: 'yellow', row: 3, column: 4)
+    insert(board_piece: king, row: king.row, column: king.column)
+
+    pawn = FirstPlayerPawn.new(color: 'yellow', row: 3, column: 2)
+    insert(board_piece: pawn, row: pawn.row, column: pawn.column)
+
+    enemy_queen = Queen.new(color: 'blue', row: 5, column: 6)
+    insert(board_piece: enemy_queen, row: enemy_queen.row, column: enemy_queen.column)
+
+    queen_block_pawn = FirstPlayerPawn.new(color: 'yellow', row: 4, column: 5)
+    insert(board_piece: queen_block_pawn, row: queen_block_pawn.row, column: queen_block_pawn.column)
+
+    enemy_knight = Knight.new(color: 'blue', row: 5, column: 5)
+    insert(board_piece: enemy_knight, row: enemy_knight.row, column: enemy_knight.column)
   end
 
   def insert_set(chess_set_obj)
@@ -845,7 +913,7 @@ class Chess
 end
 
 chess = Chess.new
-king = chess.board.select(row: 0, column: 4)
+king = chess.board.select(row: 3, column: 4)
 chess.display.show_board
 board = chess.board
-p king.knight_attack?(board)
+p king.checked?(board)
