@@ -563,15 +563,17 @@ class ChessBoard < Board
   end
 
   def insert_pieces
-    # insert_set(Yellow.new)
-    # insert_set(Blue.new)
-    king = King.new(color: 'yellow', row: 0, column: 4)
-    insert(board_piece: king, row: king.row, column: king.column)
+    insert_set(Yellow.new)
+    insert_set(Blue.new)
+    # king = King.new(color: 'yellow', row: 0, column: 4)
+    # insert(board_piece: king, row: king.row, column: king.column)
+    # enemy_king = King.new(color: 'blue', row: 7, column: 4)
+    # insert(board_piece: enemy_king, row: enemy_king.row, column: enemy_king.column)
 
-    rook_one = Rook.new(color: 'blue', row: 0, column: 7)
-    insert(board_piece: rook_one, row: rook_one.row, column: rook_one.column)
-    rook_two = Rook.new(color: 'blue', row: 1, column: 7)
-    insert(board_piece: rook_two, row: rook_two.row, column: rook_two.column)
+    # rook_one = Rook.new(color: 'blue', row: 0, column: 6)
+    # insert(board_piece: rook_one, row: rook_one.row, column: rook_one.column)
+    # rook_two = Rook.new(color: 'blue', row: 2, column: 7)
+    # insert(board_piece: rook_two, row: rook_two.row, column: rook_two.column)
 
     # pawn = FirstPlayerPawn.new(color: 'yellow', row: 3, column: 2)
     # insert(board_piece: pawn, row: pawn.row, column: pawn.column)
@@ -750,7 +752,7 @@ class BoardDisplay
   end
 
   def add_dots(board:, move_hash:)
-    -move_hash.each_value do |moves|
+    move_hash.each_value do |moves|
       next if moves.empty?
 
       moves.each do |move|
@@ -765,11 +767,13 @@ end
 
 # class to differentiate players
 class Player
+  attr_accessor :winner
   attr_reader :name, :color
 
   def initialize(name:, color:)
     @name = name
     @color = color
+    @winner = true
   end
 end
 
@@ -798,6 +802,10 @@ class ChessIO
 
   def announce_turn(player)
     puts "#{player.name}, it is your turn."
+  end
+
+  def announce_winner(player)
+    puts "Checkmate! #{player.name}, you won!"
   end
 
   def ask_and_confirm(player)
@@ -855,7 +863,9 @@ class ChessIO
             'piece' => 'The input given has nothing on it. Try again below.',
             'enemy' => 'That is not yours to move. Try again below.',
             'no_moves' => 'This piece currently has no moves. Try again below.',
-            'not_movable' => 'The piece cannot move there. Try again below'}[type]
+            'not_movable' => 'The piece cannot move there. Try again below',
+            'move_check' => 'That move will put you in check. Try again below.',
+            'check' => 'You are in check.' }[type]
     puts str
   end
 
@@ -926,7 +936,7 @@ end
 
 # the game
 class Chess
-  attr_accessor :board
+  attr_accessor :board, :winner
   attr_reader :io, :players, :display
 
   def initialize
@@ -934,6 +944,7 @@ class Chess
     @display = BoardDisplay.new(board)
     @io = ChessIO.new(board)
     @players = add_players
+    @winner = nil
   end
 
   def play
@@ -941,16 +952,53 @@ class Chess
     io.instructions
     io.announce_colors(players)
     play_round
+    announce_winner
   end
 
   # private
 
   def play_round
-    players.each do |player|
+    until mate
+      players.each do |player|
+        if board.mate?(player)
+          player.winner = false
+          break
+        end
+
+        display.show_board
+        io.announce_turn(player)
+        move(player)
+        check_if_checked(player)
+      end
+    end
+
+    @winner = players.find(&:winner)
+  end
+
+  def announce_winner
+    display.show_board
+    io.announce_winner(winner)
+  end
+
+  def mate
+    board.mate?(players[0]) || board.mate?(players[1])
+  end
+
+  def move(player)
+    io.error('check') if board.checked?(player)
+    input = io.ask_and_confirm(player)
+    move_input = io.ask_move(input)
+    piece = display.translate(input)
+    move = display.translate(move_input)
+    board.move(from_row: piece[0], from_column: piece[1], to_row: move[0], to_column: move[1])
+  end
+
+  def check_if_checked(player)
+    while board.checked?(player)
+      io.error('move_check')
+      board.unmove
       display.show_board
-      io.announce_turn(player)
-      input = io.ask_and_confirm(player)
-      move_input = io.ask_move(input)
+      move(player)
     end
   end
 
@@ -976,8 +1024,4 @@ class Chess
 end
 
 chess = Chess.new
-king = chess.board.select(row: 3, column: 4)
-chess.display.show_board
-board = chess.board
-player = chess.players[0]
-p board.mate?(player)
+chess.play
