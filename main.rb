@@ -567,35 +567,35 @@ class ChessBoard < Board
   end
 
   def insert_pieces
-    # insert_set(Yellow.new)
-    # insert_set(Blue.new)
-    king = King.new(color: 'blue', row: 7, column: 0)
-    insert(board_piece: king, row: king.row, column: king.column)
-    enemy_king = King.new(color: 'yellow', row: 0, column: 7)
-    insert(board_piece: enemy_king, row: enemy_king.row, column: enemy_king.column)
+    insert_set(Yellow.new)
+    insert_set(Blue.new)
+    # king = King.new(color: 'blue', row: 7, column: 0)
+    # insert(board_piece: king, row: king.row, column: king.column)
+    # enemy_king = King.new(color: 'yellow', row: 0, column: 7)
+    # insert(board_piece: enemy_king, row: enemy_king.row, column: enemy_king.column)
 
-    bishop = Bishop.new(color: 'yellow', row: 5, column: 7)
-    insert(board_piece: bishop, row: bishop.row, column: bishop.column)
+    # bishop = Bishop.new(color: 'yellow', row: 5, column: 7)
+    # insert(board_piece: bishop, row: bishop.row, column: bishop.column)
 
-    rook_one = Rook.new(color: 'blue', row: 7, column: 7)
-    insert(board_piece: rook_one, row: rook_one.row, column: rook_one.column)
-    rook_two = Rook.new(color: 'blue', row: 1, column: 0)
-    insert(board_piece: rook_two, row: rook_two.row, column: rook_two.column)
+    # rook_one = Rook.new(color: 'blue', row: 7, column: 7)
+    # insert(board_piece: rook_one, row: rook_one.row, column: rook_one.column)
+    # rook_two = Rook.new(color: 'blue', row: 1, column: 0)
+    # insert(board_piece: rook_two, row: rook_two.row, column: rook_two.column)
 
-    pawn = SecondPlayerPawn.new(color: 'blue', row: 4, column: 0)
-    insert(board_piece: pawn, row: pawn.row, column: pawn.column)
+    # pawn = SecondPlayerPawn.new(color: 'blue', row: 4, column: 0)
+    # insert(board_piece: pawn, row: pawn.row, column: pawn.column)
 
-    enemy_pawn = FirstPlayerPawn.new(color: 'yellow', row: 3, column: 0)
-    insert(board_piece: enemy_pawn, row: enemy_pawn.row, column: enemy_pawn.column)
+    # enemy_pawn = FirstPlayerPawn.new(color: 'yellow', row: 3, column: 0)
+    # insert(board_piece: enemy_pawn, row: enemy_pawn.row, column: enemy_pawn.column)
 
-    enemy_queen = Queen.new(color: 'blue', row: 7, column: 6)
-    insert(board_piece: enemy_queen, row: enemy_queen.row, column: enemy_queen.column)
+    # enemy_queen = Queen.new(color: 'blue', row: 7, column: 6)
+    # insert(board_piece: enemy_queen, row: enemy_queen.row, column: enemy_queen.column)
 
-    queen_block_pawn = FirstPlayerPawn.new(color: 'yellow', row: 4, column: 2)
-    insert(board_piece: queen_block_pawn, row: queen_block_pawn.row, column: queen_block_pawn.column)
+    # queen_block_pawn = FirstPlayerPawn.new(color: 'yellow', row: 3, column: 2)
+    # insert(board_piece: queen_block_pawn, row: queen_block_pawn.row, column: queen_block_pawn.column)
 
-    enemy_knight = Knight.new(color: 'blue', row: 5, column: 2)
-    insert(board_piece: enemy_knight, row: enemy_knight.row, column: enemy_knight.column)
+    # enemy_knight = Knight.new(color: 'blue', row: 5, column: 2)
+    # insert(board_piece: enemy_knight, row: enemy_knight.row, column: enemy_knight.column)
   end
 
   def insert_set(chess_set_obj)
@@ -843,6 +843,10 @@ class ChessIO
     puts "Checkmate! #{player.name}, you won!"
   end
 
+  def announce_stalemate
+    puts 'Game ends in a stalemate. Nobody wins.'
+  end
+
   def ask_and_confirm(player)
     confirm = 'n'
     until confirm == 'y'
@@ -987,18 +991,31 @@ class Chess
     io.instructions
     io.announce_colors(players)
     play_round
-    announce_winner
+    announce_endgame
   end
+
+  def announce_endgame
+    if winner
+      announce_winner
+    else
+      announce_stalemate
+    end
+  end
+
+  def announce_stalemate
+    display.show_board
+    io.announce_stalemate
+  end
+
 
   # private
 
   def play_round
-    until checkmate?
+    until endgame?
       players.each do |player|
-        if board.checkmate?(player)
-          player.winner = false
-          break
-        end
+        player.winner = false if board.checkmate?(player)
+
+        break if endgame?
 
         display.show_board
         io.announce_turn(player)
@@ -1007,7 +1024,7 @@ class Chess
       end
     end
 
-    @winner = players.find(&:winner)
+    @winner = players.find(&:winner) if checkmate?
   end
 
   def announce_winner
@@ -1017,6 +1034,14 @@ class Chess
 
   def checkmate?
     board.checkmate?(players[0]) || board.checkmate?(players[1])
+  end
+
+  def stalemate?
+    board.stalemate?(players[0]) || board.stalemate?(players[1])
+  end
+
+  def endgame?
+    checkmate? || stalemate?
   end
 
   def move(player)
@@ -1061,5 +1086,5 @@ end
 chess = Chess.new
 board = chess.board
 player = chess.players[0]
-chess.display.show_board
-p board.stalemate?(player)
+# chess.display.show_board
+chess.play
