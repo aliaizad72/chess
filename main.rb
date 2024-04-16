@@ -559,21 +559,25 @@ class ChessBoard < Board
   def moves(row:, column:)
     piece = select(row: row, column: column)
     move_hash = piece.filter_moves(self)
+    move_hash = filter_checked_moves(piece, move_hash)
     move_hash.reject { |_direction, moves| moves.empty? }
   end
 
   def insert_pieces
-    insert_set(Yellow.new)
-    insert_set(Blue.new)
-    # king = King.new(color: 'yellow', row: 0, column: 4)
-    # insert(board_piece: king, row: king.row, column: king.column)
-    # enemy_king = King.new(color: 'blue', row: 7, column: 4)
-    # insert(board_piece: enemy_king, row: enemy_king.row, column: enemy_king.column)
+    # insert_set(Yellow.new)
+    # insert_set(Blue.new)
+    king = King.new(color: 'yellow', row: 0, column: 2)
+    insert(board_piece: king, row: king.row, column: king.column)
+    enemy_king = King.new(color: 'blue', row: 7, column: 4)
+    insert(board_piece: enemy_king, row: enemy_king.row, column: enemy_king.column)
 
-    # rook_one = Rook.new(color: 'blue', row: 0, column: 6)
-    # insert(board_piece: rook_one, row: rook_one.row, column: rook_one.column)
-    # rook_two = Rook.new(color: 'blue', row: 2, column: 7)
-    # insert(board_piece: rook_two, row: rook_two.row, column: rook_two.column)
+    bishop = Bishop.new(color: 'yellow', row: 0, column: 3)
+    insert(board_piece: bishop, row: bishop.row, column: bishop.column)
+
+    rook_one = Rook.new(color: 'blue', row: 0, column: 6)
+    insert(board_piece: rook_one, row: rook_one.row, column: rook_one.column)
+    rook_two = Rook.new(color: 'blue', row: 1, column: 7)
+    insert(board_piece: rook_two, row: rook_two.row, column: rook_two.column)
 
     # pawn = FirstPlayerPawn.new(color: 'yellow', row: 3, column: 2)
     # insert(board_piece: pawn, row: pawn.row, column: pawn.column)
@@ -607,17 +611,17 @@ class ChessBoard < Board
     end
   end
 
-  def checked?(player)
-    select_king(player).checked?(self)
+  def checked?(colored_obj)
+    select_king(colored_obj).checked?(self)
   end
 
-  def all_pieces(player)
+  def all_pieces(colored_obj)
     pieces = array.flatten.reject(&:nil?)
-    pieces.select { |piece| piece.color == player.color }
+    pieces.select { |piece| piece.color == colored_obj.color }
   end
 
-  def select_king(player)
-    pieces = all_pieces(player)
+  def select_king(colored_obj)
+    pieces = all_pieces(colored_obj)
     pieces.select { |piece| piece.is_a? King }[0]
   end
 
@@ -635,7 +639,22 @@ class ChessBoard < Board
     tenant.color == piece.color
   end
 
-  def mate?(player)
+  def filter_checked_moves(piece, move_hash)
+    board_copy = copy
+
+    move_hash.each do |direction, moves|
+      filtered = []
+      moves.each do |move|
+        board_copy.move(from_row: piece.row, from_column: piece.column, to_row: move[0], to_column: move[1])
+        filtered.push(move) unless board_copy.checked?(piece)
+        board_copy.unmove
+      end
+      move_hash[direction] = filtered
+    end
+    move_hash
+  end
+
+  def checkmate?(player)
     return false unless checked?(player)
 
     board_copy = copy
@@ -652,6 +671,10 @@ class ChessBoard < Board
       end
     end
     true
+  end
+
+  def stalemate?(player)
+    return false if checked?(player)
   end
 end
 
@@ -958,9 +981,9 @@ class Chess
   # private
 
   def play_round
-    until mate
+    until checkmate?
       players.each do |player|
-        if board.mate?(player)
+        if board.checkmate?(player)
           player.winner = false
           break
         end
@@ -980,8 +1003,8 @@ class Chess
     io.announce_winner(winner)
   end
 
-  def mate
-    board.mate?(players[0]) || board.mate?(players[1])
+  def checkmate?
+    board.checkmate?(players[0]) || board.checkmate?(players[1])
   end
 
   def move(player)
