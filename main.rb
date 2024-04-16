@@ -3,12 +3,13 @@
 require 'colorize'
 # class that stores the pieces in the game
 class Board
-  attr_accessor :array
+  attr_accessor :array, :last_move
   attr_reader :size
 
   def initialize(size)
     @size = size
     @array = Array.new(size).map { Array.new(size) }
+    @last_move = nil
   end
 
   def insert(board_piece:, row:, column:)
@@ -16,9 +17,19 @@ class Board
   end
 
   def move(from_row:, from_column:, to_row:, to_column:)
-    element = select(row: from_row, column: from_column)
+    to_move = select(row: from_row, column: from_column)
+    occupant = select(row: to_row, column: to_column)
     remove(row: from_row, column: from_column)
-    insert(board_piece: element, row: to_row, column: to_column)
+    insert(board_piece: to_move, row: to_row, column: to_column)
+    @last_move = { last_occupant: occupant, coordinates: [to_row, to_column], from: [from_row, from_column] }
+  end
+
+  def unmove
+    current = last_move[:coordinates]
+    previous = last_move[:from]
+    last_occupant = last_move[:last_occupant]
+    move(from_row: current[0], from_column: current[1], to_row: previous[0], to_column: previous[1])
+    insert(board_piece: last_occupant, row: current[0], column: current[1])
   end
 
   def select(row:, column:)
@@ -27,6 +38,11 @@ class Board
 
   def remove(row:, column:)
     array[row][column] = nil
+  end
+
+  def copy
+    serialised = Marshal.dump(self)
+    Marshal.load(serialised)
   end
 end
 
@@ -100,7 +116,7 @@ class Piece
     move_array.each do |move|
       return move_array.index(move) if board.empty?(row: move[0], column: move[1]) && move_array.last == move
 
-      if board.enemy?(obj: self, row: move[0], column: move[1])
+      if board.enemy?(colored_obj: self, row: move[0], column: move[1])
         return move_array.index(move)
       elsif board.ally?(piece: self, row: move[0], column: move[1])
         return move_array.index(move) - 1
@@ -277,7 +293,7 @@ class King < FirstMovePiece
 
   def enemy_in_path?(board:, moves:)
     moves.each do |move|
-      return true if board.enemy?(obj: self, row: move[0], column: move[1])
+      return true if board.enemy?(colored_obj: self, row: move[0], column: move[1])
 
       return false if board.ally?(piece: self, row: move[0], column: move[1])
     end
@@ -286,7 +302,7 @@ class King < FirstMovePiece
 
   def find_enemy_index(board:, moves:)
     moves.each do |move|
-      return moves.index(move) if board.enemy?(obj: self, row: move[0], column: move[1])
+      return moves.index(move) if board.enemy?(colored_obj: self, row: move[0], column: move[1])
     end
   end
 
@@ -305,7 +321,7 @@ class King < FirstMovePiece
 
   def knight_attack?(board)
     possible_attacked_coordinates(board)[:knight].each do |move|
-      return true if board.enemy?(obj: self, row: move[0], column: move[1])
+      return true if board.enemy?(colored_obj: self, row: move[0], column: move[1])
     end
     false
   end
@@ -353,7 +369,7 @@ class Pawn < FirstMovePiece
       next unless diagonals.include?(direction)
 
       move = moves[0] # diagonal only one moves
-      moves.delete(move) unless board.enemy?(obj: self, row: move[0], column: move[1])
+      moves.delete(move) unless board.enemy?(colored_obj: self, row: move[0], column: move[1])
     end
     move_hash
   end
@@ -537,20 +553,23 @@ class ChessBoard < Board
   def insert_pieces
     # insert_set(Yellow.new)
     # insert_set(Blue.new)
-    king = King.new(color: 'yellow', row: 3, column: 4)
-    insert(board_piece: king, row: king.row, column: king.column)
+    # king = King.new(color: 'yellow', row: 3, column: 4)
+    # insert(board_piece: king, row: king.row, column: king.column)
 
     pawn = FirstPlayerPawn.new(color: 'yellow', row: 3, column: 2)
     insert(board_piece: pawn, row: pawn.row, column: pawn.column)
 
-    enemy_queen = Queen.new(color: 'blue', row: 5, column: 6)
-    insert(board_piece: enemy_queen, row: enemy_queen.row, column: enemy_queen.column)
+    enemy_pawn = SecondPlayerPawn.new(color: 'blue', row: 4, column: 3)
+    insert(board_piece: enemy_pawn, row: enemy_pawn.row, column: enemy_pawn.column)
 
-    queen_block_pawn = FirstPlayerPawn.new(color: 'yellow', row: 4, column: 5)
-    insert(board_piece: queen_block_pawn, row: queen_block_pawn.row, column: queen_block_pawn.column)
+    # enemy_queen = Queen.new(color: 'blue', row: 5, column: 6)
+    # insert(board_piece: enemy_queen, row: enemy_queen.row, column: enemy_queen.column)
 
-    enemy_knight = Knight.new(color: 'blue', row: 5, column: 5)
-    insert(board_piece: enemy_knight, row: enemy_knight.row, column: enemy_knight.column)
+    # queen_block_pawn = FirstPlayerPawn.new(color: 'yellow', row: 4, column: 5)
+    # insert(board_piece: queen_block_pawn, row: queen_block_pawn.row, column: queen_block_pawn.column)
+
+    # enemy_knight = Knight.new(color: 'blue', row: 5, column: 5)
+    # insert(board_piece: enemy_knight, row: enemy_knight.row, column: enemy_knight.column)
   end
 
   def insert_set(chess_set_obj)
@@ -583,11 +602,11 @@ class ChessBoard < Board
     pieces.select { |piece| piece.is_a? King }[0]
   end
 
-  def enemy?(obj:, row:, column:)
+  def enemy?(colored_obj:, row:, column:)
     return false if empty?(row: row, column: column)
 
     tenant = select(row: row, column: column)
-    tenant.color != obj.color
+    tenant.color != colored_obj.color
   end
 
   def ally?(piece:, row:, column:)
@@ -595,6 +614,14 @@ class ChessBoard < Board
 
     tenant = select(row: row, column: column)
     tenant.color == piece.color
+  end
+
+  def mate?(player)
+    board_copy = copy
+    pieces = board_copy.all_pieces(player)
+    pieces.each do |piece|
+      piece_moves = moves(row: piece.row, column: piece.column)
+    end
   end
 end
 
@@ -618,7 +645,7 @@ class BoardDisplay
   end
 
   def show_moves(row:, column:)
-    board_copy = copy(board)
+    board_copy = board.copy
     move_hash = board.moves(row: row, column: column)
     turn_enemies_red(board: board_copy, move_hash: move_hash)
     add_dots(board: board_copy, move_hash: move_hash)
@@ -679,12 +706,6 @@ class BoardDisplay
     str.prepend('    ')
   end
 
-  def copy(board)
-    # deep copy
-    serialized_board = Marshal.dump(board)
-    Marshal.load(serialized_board)
-  end
-
   def turn_enemies_red(board:, move_hash:)
     move_hash.each_value do |moves|
       next if moves.empty?
@@ -701,7 +722,7 @@ class BoardDisplay
   end
 
   def add_dots(board:, move_hash:)
-    move_hash.each_value do |moves|
+    -move_hash.each_value do |moves|
       next if moves.empty?
 
       moves.each do |move|
@@ -836,7 +857,7 @@ class ChessIO
 
   def input_enemy?(player:, input:)
     input_arr = display.translate(input)
-    board.enemy?(obj: player, row: input_arr[0], column: input_arr[1])
+    board.enemy?(colored_obj: player, row: input_arr[0], column: input_arr[1])
   end
 
   def check_input_moves(player:, input:)
@@ -930,5 +951,9 @@ chess = Chess.new
 king = chess.board.select(row: 3, column: 4)
 chess.display.show_board
 board = chess.board
-player = chess.players.sample
-p board.checked?(player)
+board.move(from_row: 3, from_column: 2, to_row: 4, to_column: 3)
+chess.display.show_board
+board.unmove
+chess.display.show_board
+# player = chess.players[0]
+# p board.mate?(player)
