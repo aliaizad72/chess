@@ -569,6 +569,20 @@ class ChessBoard < Board
     end
   end
 
+  def checked?(player)
+    select_king(player).checked?(self)
+  end
+
+  def all_pieces(player)
+    pieces = array.flatten.reject(&:nil?)
+    pieces.select { |piece| piece.color == player.color }
+  end
+
+  def select_king(player)
+    pieces = all_pieces(player)
+    pieces.select { |piece| piece.is_a? King }[0]
+  end
+
   def enemy?(obj:, row:, column:)
     return false if empty?(row: row, column: column)
 
@@ -916,4 +930,5 @@ chess = Chess.new
 king = chess.board.select(row: 3, column: 4)
 chess.display.show_board
 board = chess.board
-p king.checked?(board)
+player = chess.players.sample
+p board.checked?(player)
