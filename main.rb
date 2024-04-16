@@ -14,6 +14,7 @@ class Board
 
   def insert(board_piece:, row:, column:)
     array[row][column] = board_piece
+    board_piece.update(row: row, column: column) if board_piece.is_a? Piece
   end
 
   def move(from_row:, from_column:, to_row:, to_column:)
@@ -90,6 +91,11 @@ class Piece
     move_hash = moves_sums
     move_hash = filter_in_bounds(board: board, move_hash: move_hash)
     filter_blocked_path(board: board, move_hash: move_hash)
+  end
+
+  def update(row:, column:)
+    @row = row
+    @column = column
   end
 
   # private
@@ -309,11 +315,15 @@ class King < FirstMovePiece
   def non_knight_attack?(board)
     hash = filter_enemy_in_path(board)
     hash = hash.reject { |_direction, moves| moves.empty? }
+    return false if hash.empty?
+
     king_coordinates = [row, column]
     hash.each do |direction, coordinates|
       piece = board.select(row: coordinates[0], column: coordinates[1])
       piece_moves = piece.filter_moves(board)
       attack_direction = opposite_direction(direction)
+      next if piece_moves[attack_direction].nil?
+
       return true if piece_moves[attack_direction].include?(king_coordinates)
     end
     false
@@ -321,6 +331,8 @@ class King < FirstMovePiece
 
   def knight_attack?(board)
     possible_attacked_coordinates(board)[:knight].each do |move|
+      next unless board.select(row: move[0], column: move[1]).is_a? Knight
+
       return true if board.enemy?(colored_obj: self, row: move[0], column: move[1])
     end
     false
@@ -553,14 +565,19 @@ class ChessBoard < Board
   def insert_pieces
     # insert_set(Yellow.new)
     # insert_set(Blue.new)
-    # king = King.new(color: 'yellow', row: 3, column: 4)
-    # insert(board_piece: king, row: king.row, column: king.column)
+    king = King.new(color: 'yellow', row: 0, column: 4)
+    insert(board_piece: king, row: king.row, column: king.column)
 
-    pawn = FirstPlayerPawn.new(color: 'yellow', row: 3, column: 2)
-    insert(board_piece: pawn, row: pawn.row, column: pawn.column)
+    rook_one = Rook.new(color: 'blue', row: 0, column: 7)
+    insert(board_piece: rook_one, row: rook_one.row, column: rook_one.column)
+    rook_two = Rook.new(color: 'blue', row: 1, column: 7)
+    insert(board_piece: rook_two, row: rook_two.row, column: rook_two.column)
 
-    enemy_pawn = SecondPlayerPawn.new(color: 'blue', row: 4, column: 3)
-    insert(board_piece: enemy_pawn, row: enemy_pawn.row, column: enemy_pawn.column)
+    # pawn = FirstPlayerPawn.new(color: 'yellow', row: 3, column: 2)
+    # insert(board_piece: pawn, row: pawn.row, column: pawn.column)
+
+    # enemy_pawn = SecondPlayerPawn.new(color: 'blue', row: 4, column: 3)
+    # insert(board_piece: enemy_pawn, row: enemy_pawn.row, column: enemy_pawn.column)
 
     # enemy_queen = Queen.new(color: 'blue', row: 5, column: 6)
     # insert(board_piece: enemy_queen, row: enemy_queen.row, column: enemy_queen.column)
@@ -617,11 +634,22 @@ class ChessBoard < Board
   end
 
   def mate?(player)
+    return false unless checked?(player)
+
     board_copy = copy
     pieces = board_copy.all_pieces(player)
     pieces.each do |piece|
-      piece_moves = moves(row: piece.row, column: piece.column)
+      piece_moves = board_copy.moves(row: piece.row, column: piece.column)
+      piece_moves.each_value do |moves|
+        moves.each do |move|
+          board_copy.move(from_row: piece.row, from_column: piece.column, to_row: move[0], to_column: move[1])
+          return false unless board_copy.checked?(player)
+
+          board_copy.unmove
+        end
+      end
     end
+    true
   end
 end
 
@@ -951,9 +979,5 @@ chess = Chess.new
 king = chess.board.select(row: 3, column: 4)
 chess.display.show_board
 board = chess.board
-board.move(from_row: 3, from_column: 2, to_row: 4, to_column: 3)
-chess.display.show_board
-board.unmove
-chess.display.show_board
-# player = chess.players[0]
-# p board.mate?(player)
+player = chess.players[0]
+p board.mate?(player)
