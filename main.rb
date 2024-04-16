@@ -244,18 +244,15 @@ class Knight < Piece
   end
 end
 
-# superclass where first move matters
-class FirstMovePiece < Piece
+# chess piece King
+class King < Piece
   attr_accessor :first_move
 
   def initialize(color:, row:, column:)
     @first_move = true
     super(color: color, row: row, column: column)
   end
-end
 
-# chess piece King
-class King < FirstMovePiece
   def initials
     'K'
   end
@@ -344,14 +341,14 @@ class King < FirstMovePiece
 end
 
 # chess piece Pawn
-class Pawn < FirstMovePiece
+class Pawn < Piece
   def initials
     'P'
   end
 
   def all_moves
     result = super
-    result[main_direction] += two_step if first_move
+    result[main_direction] += two_step if row == starting_row
     result
   end
 
@@ -369,7 +366,7 @@ class Pawn < FirstMovePiece
 
   def filter_moves(board, move_hash = moves_sums)
     move_hash = filter_diagonals(board: board, move_hash: move_hash)
-    move_hash = filter_two_steps(board: board, move_hash: move_hash)
+    move_hash = filter_forwards(board: board, move_hash: move_hash)
     move_hash = filter_in_bounds(board: board, move_hash: move_hash)
     filter_blocked_path(board: board, move_hash: move_hash)
   end
@@ -386,13 +383,11 @@ class Pawn < FirstMovePiece
     move_hash
   end
 
-  def filter_two_steps(board:, move_hash:)
+  def filter_forwards(board:, move_hash:)
     move_hash.each do |direction, moves|
       next unless main_direction == direction
 
       moves.each do |move|
-        next unless two_step.include?(move)
-
         moves.delete(move) unless board.empty?(row: move[0], column: move[1])
       end
     end
@@ -402,6 +397,10 @@ end
 
 # Pawn piece for Player that move First
 class FirstPlayerPawn < Pawn
+  def starting_row
+    1
+  end
+
   def move_directions
     %i[north
        north_east
@@ -424,6 +423,10 @@ end
 
 # Pawn piece for Player move Second
 class SecondPlayerPawn < Pawn
+  def starting_row
+    6
+  end
+
   def move_directions
     %i[south
        south_east
@@ -566,33 +569,33 @@ class ChessBoard < Board
   def insert_pieces
     # insert_set(Yellow.new)
     # insert_set(Blue.new)
-    king = King.new(color: 'yellow', row: 0, column: 2)
+    king = King.new(color: 'blue', row: 7, column: 0)
     insert(board_piece: king, row: king.row, column: king.column)
-    enemy_king = King.new(color: 'blue', row: 7, column: 4)
+    enemy_king = King.new(color: 'yellow', row: 0, column: 7)
     insert(board_piece: enemy_king, row: enemy_king.row, column: enemy_king.column)
 
-    bishop = Bishop.new(color: 'yellow', row: 0, column: 3)
+    bishop = Bishop.new(color: 'yellow', row: 5, column: 7)
     insert(board_piece: bishop, row: bishop.row, column: bishop.column)
 
-    rook_one = Rook.new(color: 'blue', row: 0, column: 6)
+    rook_one = Rook.new(color: 'blue', row: 7, column: 7)
     insert(board_piece: rook_one, row: rook_one.row, column: rook_one.column)
-    rook_two = Rook.new(color: 'blue', row: 1, column: 7)
+    rook_two = Rook.new(color: 'blue', row: 1, column: 0)
     insert(board_piece: rook_two, row: rook_two.row, column: rook_two.column)
 
-    # pawn = FirstPlayerPawn.new(color: 'yellow', row: 3, column: 2)
-    # insert(board_piece: pawn, row: pawn.row, column: pawn.column)
+    pawn = SecondPlayerPawn.new(color: 'blue', row: 4, column: 0)
+    insert(board_piece: pawn, row: pawn.row, column: pawn.column)
 
-    # enemy_pawn = SecondPlayerPawn.new(color: 'blue', row: 4, column: 3)
-    # insert(board_piece: enemy_pawn, row: enemy_pawn.row, column: enemy_pawn.column)
+    enemy_pawn = FirstPlayerPawn.new(color: 'yellow', row: 3, column: 0)
+    insert(board_piece: enemy_pawn, row: enemy_pawn.row, column: enemy_pawn.column)
 
-    # enemy_queen = Queen.new(color: 'blue', row: 5, column: 6)
-    # insert(board_piece: enemy_queen, row: enemy_queen.row, column: enemy_queen.column)
+    enemy_queen = Queen.new(color: 'blue', row: 7, column: 6)
+    insert(board_piece: enemy_queen, row: enemy_queen.row, column: enemy_queen.column)
 
-    # queen_block_pawn = FirstPlayerPawn.new(color: 'yellow', row: 4, column: 5)
-    # insert(board_piece: queen_block_pawn, row: queen_block_pawn.row, column: queen_block_pawn.column)
+    queen_block_pawn = FirstPlayerPawn.new(color: 'yellow', row: 4, column: 2)
+    insert(board_piece: queen_block_pawn, row: queen_block_pawn.row, column: queen_block_pawn.column)
 
-    # enemy_knight = Knight.new(color: 'blue', row: 5, column: 5)
-    # insert(board_piece: enemy_knight, row: enemy_knight.row, column: enemy_knight.column)
+    enemy_knight = Knight.new(color: 'blue', row: 5, column: 2)
+    insert(board_piece: enemy_knight, row: enemy_knight.row, column: enemy_knight.column)
   end
 
   def insert_set(chess_set_obj)
@@ -654,6 +657,13 @@ class ChessBoard < Board
     move_hash
   end
 
+  def no_moves_left?(player)
+    pieces = all_pieces(player)
+    pieces_moves = pieces.map { |piece| moves(row: piece.row, column: piece.column) }
+    pieces_moves = pieces_moves.reject(&:empty?)
+    pieces_moves.empty?
+  end
+
   def checkmate?(player)
     return false unless checked?(player)
 
@@ -675,6 +685,8 @@ class ChessBoard < Board
 
   def stalemate?(player)
     return false if checked?(player)
+
+    no_moves_left?(player)
   end
 end
 
@@ -1047,4 +1059,7 @@ class Chess
 end
 
 chess = Chess.new
-chess.play
+board = chess.board
+player = chess.players[0]
+chess.display.show_board
+p board.stalemate?(player)
