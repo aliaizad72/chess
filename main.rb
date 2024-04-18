@@ -19,18 +19,21 @@ class Board
 
   def move(from_row:, from_column:, to_row:, to_column:)
     to_move = select(row: from_row, column: from_column)
-    occupant = select(row: to_row, column: to_column)
+    to_delete = select(row: to_row, column: to_column)
     remove(row: from_row, column: from_column)
     insert(board_piece: to_move, row: to_row, column: to_column)
-    @last_move = { last_occupant: occupant, coordinates: [to_row, to_column], from: [from_row, from_column] }
+    @last_move = { moved: to_move,
+                   deleted: to_delete,
+                   coordinates: [to_row, to_column],
+                   from: [from_row, from_column] }
   end
 
   def unmove
     current = last_move[:coordinates]
     previous = last_move[:from]
-    last_occupant = last_move[:last_occupant]
+    deleted = last_move[:deleted]
     move(from_row: current[0], from_column: current[1], to_row: previous[0], to_column: previous[1])
-    insert(board_piece: last_occupant, row: current[0], column: current[1])
+    insert(board_piece: deleted, row: current[0], column: current[1])
   end
 
   def select(row:, column:)
@@ -364,9 +367,43 @@ class Pawn < Piece
     # implement this in subclass
   end
 
+  def starting_row
+    # implement this in subclass
+  end
+
+  def distance(loc_one, loc_two)
+    (loc_one - loc_two).abs
+  end
+
+  def distance_from_start
+    distance(row, starting_row)
+  end
+
+  def en_passant_row(piece)
+    # implement this in subclass
+  end
+
+  def filter_en_passant(board:, move_hash:)
+    return move_hash unless board.last_move
+
+    piece = board.last_move[:moved]
+    last_row = board.last_move[:from][0]
+    move = if en_passant?(piece: piece, last_row: last_row)
+             [[en_passant_row(piece), piece.column]]
+           else
+             []
+           end
+    move_hash.merge({ en_passant: move })
+  end
+
+  def en_passant?(piece:, last_row:)
+    distance_from_start >= 3 && piece.is_a?(Pawn) && color != piece.color &&distance(row, last_row) == 2 && distance(column, piece.column) == 1
+  end
+
   def filter_moves(board, move_hash = moves_sums)
     move_hash = filter_diagonals(board: board, move_hash: move_hash)
     move_hash = filter_forwards(board: board, move_hash: move_hash)
+    move_hash = filter_en_passant(board: board, move_hash: move_hash)
     move_hash = filter_in_bounds(board: board, move_hash: move_hash)
     filter_blocked_path(board: board, move_hash: move_hash)
   end
@@ -419,6 +456,10 @@ class FirstPlayerPawn < Pawn
     %i[north_west
        north_east]
   end
+
+  def en_passant_row(piece)
+    piece.row + 1
+  end
 end
 
 # Pawn piece for Player move Second
@@ -444,6 +485,10 @@ class SecondPlayerPawn < Pawn
   def diagonals
     %i[south_east
        south_west]
+  end
+
+  def en_passant_row(piece)
+    piece.row - 1
   end
 end
 
@@ -1006,7 +1051,6 @@ class Chess
     display.show_board
     io.announce_stalemate
   end
-
 
   # private
 
