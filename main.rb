@@ -15,7 +15,7 @@ class Board
   def insert(board_piece:, row:, column:)
     array[row][column] = board_piece
     board_piece.update(row: row, column: column) if board_piece.is_a? Piece
-  end
+ end
 
   def move(from_row:, from_column:, to_row:, to_column:)
     to_move = select(row: from_row, column: from_column)
@@ -188,22 +188,37 @@ class Piece
   end
 end
 
-# superclass for pieces that can move 7 steps
-class SevenStepPiece < Piece
+# chess piece Queen
+class Queen < Piece
+  def initials
+    'Q'
+  end
+
   def scalar
     7
   end
 end
 
-# chess piece Queen
-class Queen < SevenStepPiece
-  def initials
-    'Q'
+class CastlingPiece < Piece
+  attr_accessor :first_move
+
+  def initialize(color:, row:, column:)
+    @first_move = nil
+    super(color: color, row: row, column: column)
+  end
+
+  def update(row:, column:)
+    super(row: row, column: column)
+    @first_move = if first_move.nil?
+                    true
+                  else
+                    false
+                  end
   end
 end
 
 # chess piece Rook
-class Rook < SevenStepPiece
+class Rook < CastlingPiece
   def initials
     'R'
   end
@@ -214,10 +229,14 @@ class Rook < SevenStepPiece
        west
        east]
   end
+
+  def scalar
+    7
+  end
 end
 
 # chess piece Bishop
-class Bishop < SevenStepPiece
+class Bishop < Piece
   def initials
     'B'
   end
@@ -227,6 +246,10 @@ class Bishop < SevenStepPiece
        north_west
        south_east
        south_west]
+  end
+
+  def scalar
+    7
   end
 end
 
@@ -249,14 +272,7 @@ class Knight < Piece
 end
 
 # chess piece King
-class King < Piece
-  attr_accessor :first_move
-
-  def initialize(color:, row:, column:)
-    @first_move = true
-    super(color: color, row: row, column: column)
-  end
-
+class King < CastlingPiece
   def initials
     'K'
   end
@@ -1174,7 +1190,5 @@ class Chess
 end
 
 chess = Chess.new
-board = chess.board
-player = chess.players[0]
-# chess.display.show_board
+$board = chess.board
 chess.play
