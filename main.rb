@@ -81,7 +81,7 @@ class Piece
     initials.colorize(color.to_sym)
   end
 
-  def moves_sums(hash = all_moves)
+  def moves_sums(hash: all_moves, row: @row, column: @column)
     hash.each_value do |moves|
       moves.each do |move|
         move[0] = move[0] + row
@@ -199,6 +199,7 @@ class Queen < Piece
   end
 end
 
+# pieces that is needed for castling
 class CastlingPiece < Piece
   attr_accessor :first_move
 
@@ -214,6 +215,93 @@ class CastlingPiece < Piece
                   else
                     false
                   end
+  end
+
+  def castling_path?(board)
+    unblocked?(path: [1, 2, 3], board: board) || unblocked?(path: [5, 6], board: board)
+  end
+
+  def unblocked?(path:, board:)
+    path.each do |col|
+      return false unless board.empty?(row: row, column: col)
+    end
+    true
+  end
+
+  def knight_attack
+    { knight: [[1, 2], [1, -2], [2, 1], [2, -1], [-1, 2], [-1, -2], [-2, 1], [-2, -1]] }
+  end
+
+  def attacked_vectors
+    all_vectors = {}
+    move_directions.each do |direction|
+      vector = base_vectors(direction)
+      vectors = max_range_vectors(vector, 7)
+      all_vectors[direction] = vectors
+    end
+    all_vectors.merge(knight_attack)
+  end
+
+  def attacked_vectors_sums(board:, row:, column:)
+    hash = moves_sums(hash: attacked_vectors, row: row, column: column)
+    filter_in_bounds(board: board, move_hash: hash)
+  end
+
+  def filter_enemy_in_path(board:, row:, column:)
+    hash = attacked_vectors_sums(board: board, row: row, column: column)
+    hash.delete(:knight) # knight is not affected by path attack
+    hash.each do |direction, moves|
+      next if moves.empty?
+
+      hash[direction] = if enemy_in_path?(board: board, moves: moves)
+                          moves[find_enemy_index(board: board, moves: moves)]
+                        else
+                          []
+                        end
+    end
+    hash
+  end
+
+  def enemy_in_path?(board:, moves:)
+    moves.each do |move|
+      return true if board.enemy?(colored_obj: self, row: move[0], column: move[1])
+
+      return false if board.ally?(piece: self, row: move[0], column: move[1])
+    end
+    false
+  end
+
+  def find_enemy_index(board:, moves:)
+    moves.each do |move|
+      return moves.index(move) if board.enemy?(colored_obj: self, row: move[0], column: move[1])
+    end
+  end
+
+  def non_knight_attack?(board:, row:, column:)
+    hash = filter_enemy_in_path(board: board, row: row, column: column)
+    hash = hash.reject { |_direction, moves| moves.empty? }
+    return false if hash.empty?
+
+    attacked_coordinates = [row, column]
+    hash.each do |direction, coordinates|
+      piece = board.select(row: coordinates[0], column: coordinates[1])
+      piece_moves = piece.filter_moves(board)
+      attack_direction = opposite_direction(direction)
+      next if piece_moves[attack_direction].nil?
+
+      return true if piece_moves[attack_direction].include?(attacked_coordinates)
+    end
+    false
+  end
+
+  def knight_attack?(board:, row:, column:)
+    hash = attacked_vectors_sums(board: board, row: row, column: column)
+    hash[:knight].each do |move|
+      next unless board.select(row: move[0], column: move[1]).is_a? Knight
+
+      return true if board.enemy?(colored_obj: self, row: move[0], column: move[1])
+    end
+    false
   end
 end
 
@@ -277,86 +365,8 @@ class King < CastlingPiece
     'K'
   end
 
-  def knight_attack
-    { knight: [[1, 2], [1, -2], [2, 1], [2, -1], [-1, 2], [-1, -2], [-2, 1], [-2, -1]] }
-  end
-
-  def attacked_vectors
-    all_vectors = {}
-    move_directions.each do |direction|
-      vector = base_vectors(direction)
-      vectors = max_range_vectors(vector, 7)
-      all_vectors[direction] = vectors
-    end
-    all_vectors.merge(knight_attack)
-  end
-
-  def attacked_vectors_sums
-    moves_sums(attacked_vectors)
-  end
-
-  def possible_attacked_coordinates(board)
-    filter_in_bounds(board: board, move_hash: attacked_vectors_sums)
-  end
-
-  def filter_enemy_in_path(board)
-    hash = possible_attacked_coordinates(board)
-    hash.delete(:knight) # knight is not affected by path attack
-    hash.each do |direction, moves|
-      next if moves.empty?
-
-      hash[direction] = if enemy_in_path?(board: board, moves: moves)
-                          moves[find_enemy_index(board: board, moves: moves)]
-                        else
-                          []
-                        end
-    end
-    hash
-  end
-
-  def enemy_in_path?(board:, moves:)
-    moves.each do |move|
-      return true if board.enemy?(colored_obj: self, row: move[0], column: move[1])
-
-      return false if board.ally?(piece: self, row: move[0], column: move[1])
-    end
-    false
-  end
-
-  def find_enemy_index(board:, moves:)
-    moves.each do |move|
-      return moves.index(move) if board.enemy?(colored_obj: self, row: move[0], column: move[1])
-    end
-  end
-
-  def non_knight_attack?(board)
-    hash = filter_enemy_in_path(board)
-    hash = hash.reject { |_direction, moves| moves.empty? }
-    return false if hash.empty?
-
-    king_coordinates = [row, column]
-    hash.each do |direction, coordinates|
-      piece = board.select(row: coordinates[0], column: coordinates[1])
-      piece_moves = piece.filter_moves(board)
-      attack_direction = opposite_direction(direction)
-      next if piece_moves[attack_direction].nil?
-
-      return true if piece_moves[attack_direction].include?(king_coordinates)
-    end
-    false
-  end
-
-  def knight_attack?(board)
-    possible_attacked_coordinates(board)[:knight].each do |move|
-      next unless board.select(row: move[0], column: move[1]).is_a? Knight
-
-      return true if board.enemy?(colored_obj: self, row: move[0], column: move[1])
-    end
-    false
-  end
-
   def checked?(board)
-    non_knight_attack?(board) || knight_attack?(board)
+    non_knight_attack?(board: board, row: row, column: column) || knight_attack?(board: board, row: row, column: column)
   end
 end
 
@@ -521,7 +531,7 @@ end
 # [[Piece, row, column], .., ..]
 class ChessSet
   def set
-    pawns + rooks + knights + bishops + queen + king
+    pawns + rooks + queen + king + knights + bishops
   end
 
   def color
@@ -1190,5 +1200,4 @@ class Chess
 end
 
 chess = Chess.new
-$board = chess.board
 chess.play
