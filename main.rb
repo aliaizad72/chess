@@ -24,12 +24,13 @@ class Board
     insert(board_piece: to_move, row: to_row, column: to_column)
     @last_move = { moved: to_move,
                    deleted: to_delete,
-                   coordinates: [to_row, to_column],
-                   from: [from_row, from_column] }
+                   moved_coordinates: [to_row, to_column],
+                   from: [from_row, from_column],
+                   en_passant?: false }
   end
 
   def unmove
-    current = last_move[:coordinates]
+    current = last_move[:moved_coordinates]
     previous = last_move[:from]
     deleted = last_move[:deleted]
     move(from_row: current[0], from_column: current[1], to_row: previous[0], to_column: previous[1])
@@ -460,6 +461,10 @@ class FirstPlayerPawn < Pawn
   def en_passant_row(piece)
     piece.row + 1
   end
+
+  def en_pass_attack_row
+    row - 1
+  end
 end
 
 # Pawn piece for Player move Second
@@ -489,6 +494,10 @@ class SecondPlayerPawn < Pawn
 
   def en_passant_row(piece)
     piece.row - 1
+  end
+
+  def en_pass_attack_row
+    row + 1
   end
 end
 
@@ -641,6 +650,43 @@ class ChessBoard < Board
 
     # enemy_knight = Knight.new(color: 'blue', row: 5, column: 2)
     # insert(board_piece: enemy_knight, row: enemy_knight.row, column: enemy_knight.column)
+  end
+
+  def move(from_row:, from_column:, to_row:, to_column:)
+    if en_passant_move?(from_row: from_row, from_column: from_column, to_row: to_row, to_column: to_column)
+      super(from_row: from_row, from_column: from_column, to_row: to_row, to_column: to_column)
+      en_passant(to_row: to_row, to_column: to_column)
+    else
+      super(from_row: from_row, from_column: from_column, to_row: to_row, to_column: to_column)
+    end
+  end
+
+  def unmove
+    if last_move[:en_passant?]
+      deleted = last_move[:deleted]
+      insert(board_piece: deleted, row: deleted.row, column: deleted.column)
+      @last_move[:deleted] = nil
+      @last_move[:en_passant?] = false
+    end
+
+    super
+  end
+
+  def en_passant(to_row:, to_column:)
+    pawn = select(row: to_row, column: to_column)
+    delete_row = pawn.en_pass_attack_row
+    delete_col = pawn.column
+    to_delete = select(row: delete_row, column: delete_col)
+    remove(row: delete_row, column: delete_col)
+    @last_move[:deleted] = to_delete
+    @last_move[:en_passant?] = true
+  end
+
+  def en_passant_move?(from_row:, from_column:, to_row:, to_column:)
+    to_move = select(row: from_row, column: from_column)
+    column_diff = (from_column - to_column).abs
+
+    to_move.is_a?(Pawn) && empty?(row: to_row, column: to_column) && column_diff == 1
   end
 
   def insert_set(chess_set_obj)
