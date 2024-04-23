@@ -280,6 +280,32 @@ class King < CastlingPiece
     'K'
   end
 
+  def castling_conditions(path:, board:)
+    piece = board.select(row: row, column: 7)
+    !checked?(board) && check_rook?(piece) && check_first_move?(piece) && check_path_unblocked?(path: path, board: board) && check_path_unattacked?(path: path, board: board)
+  end
+
+  def right_castling_conditions(board)
+    castling_conditions(path: [5, 6], board: board)
+  end
+
+  def check_rook?(piece)
+    return false unless piece.is_a? Rook
+
+    true
+  end
+
+  def check_first_move?(rook)
+    rook.first_move
+  end
+
+  def check_path_unattacked?(path:, board:)
+    path.each do |col|
+      return false if attacked?(board: board, row: row, column: col)
+    end
+    true
+  end
+
   def checked?(board)
     attacked?(board: board, row: row, column: column)
   end
@@ -288,11 +314,7 @@ class King < CastlingPiece
     non_knight_attack?(board: board, row: row, column: column) || knight_attack?(board: board, row: row, column: column)
   end
 
-  def castling_path?(board)
-    unblocked?(path: [1, 2, 3], board: board) || unblocked?(path: [5, 6], board: board)
-  end
-
-  def unblocked?(path:, board:)
+  def check_path_unblocked?(path:, board:)
     path.each do |col|
       return false unless board.empty?(row: row, column: col)
     end
@@ -663,10 +685,10 @@ class ChessBoard < Board
     # bishop = Bishop.new(color: 'yellow', row: 5, column: 7)
     # insert(board_piece: bishop, row: bishop.row, column: bishop.column)
 
-    rook_one = Rook.new(color: 'blue', row: 7, column: 5)
+    rook_one = Rook.new(color: 'yellow', row: 0, column: 7)
     insert(board_piece: rook_one, row: rook_one.row, column: rook_one.column)
-    # rook_two = Rook.new(color: 'blue', row: 1, column: 0)
-    # insert(board_piece: rook_two, row: rook_two.row, column: rook_two.column)
+    rook_two = Rook.new(color: 'blue', row: 7, column: 6)
+    insert(board_piece: rook_two, row: rook_two.row, column: rook_two.column)
 
     # pawn = SecondPlayerPawn.new(color: 'blue', row: 4, column: 0)
     # insert(board_piece: pawn, row: pawn.row, column: pawn.column)
@@ -680,7 +702,7 @@ class ChessBoard < Board
     # queen_block_pawn = FirstPlayerPawn.new(color: 'yellow', row: 3, column: 2)
     # insert(board_piece: queen_block_pawn, row: queen_block_pawn.row, column: queen_block_pawn.column)
 
-    # enemy_knight = Knight.new(color: 'blue', row: 5, column: 2)
+    # enemy_knight = Knight.new(color: 'yellow', row: 0, column: 2)
     # insert(board_piece: enemy_knight, row: enemy_knight.row, column: enemy_knight.column)
   end
 
@@ -1210,4 +1232,4 @@ chess = Chess.new
 board = chess.board
 player = chess.players[0]
 king = board.select_king(player)
-p king.attacked?(board: board, row: 0, column: 5)
+p king.right_castling_conditions(board)
