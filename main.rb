@@ -15,7 +15,7 @@ class Board
   def insert(board_piece:, row:, column:)
     array[row][column] = board_piece
     board_piece.update(row: row, column: column) if board_piece.is_a? Piece
- end
+  end
 
   def move(from_row:, from_column:, to_row:, to_column:)
     to_move = select(row: from_row, column: from_column)
@@ -216,8 +216,6 @@ class CastlingPiece < Piece
                     false
                   end
   end
-
-
 end
 
 # chess piece Rook
@@ -280,13 +278,39 @@ class King < CastlingPiece
     'K'
   end
 
-  def castling_conditions(path:, board:)
-    piece = board.select(row: row, column: 7)
-    !checked?(board) && check_rook?(piece) && check_first_move?(piece) && check_path_unblocked?(path: path, board: board) && check_path_unattacked?(path: path, board: board)
+  def filter_moves(board)
+    move_hash = filter_left_castling(board: board, move_hash: moves_sums)
+    move_hash = filter_right_castling(board: board, move_hash: move_hash)
+    move_hash = filter_in_bounds(board: board, move_hash: move_hash)
+    filter_blocked_path(board: board, move_hash: move_hash)
+  end
+
+  def castling_conditions(path:, board:, rook_col:)
+    piece = board.select(row: row, column: rook_col)
+    first_move && check_rook?(piece) && check_first_move?(piece) && check_path_unblocked?(path: path,
+                                                                                          board: board) && check_path_unattacked?(
+                                                                                            path: path, board: board
+                                                                                          )
+  end
+
+  def filter_left_castling(board:, move_hash:)
+    return move_hash unless left_castling_conditions(board)
+
+    move_hash.merge({ left_castling: [[row, column - 2]] })
+  end
+
+  def filter_right_castling(board:, move_hash:)
+    return move_hash unless right_castling_conditions(board)
+
+    move_hash.merge({ right_castling: [[row, column + 2]] })
   end
 
   def right_castling_conditions(board)
-    castling_conditions(path: [5, 6], board: board)
+    castling_conditions(path: [5, 6], board: board, rook_col: 7)
+  end
+
+  def left_castling_conditions(board)
+    castling_conditions(path: [2, 3], board: board, rook_col: 0)
   end
 
   def check_rook?(piece)
@@ -377,6 +401,8 @@ class King < CastlingPiece
 
     attacked_coordinates = [row, column]
     hash.each do |direction, coordinates|
+      next if %i[right_castling left_castling].include?(direction)
+
       piece = board.select(row: coordinates[0], column: coordinates[1])
       piece_moves = piece.filter_moves(board)
       attack_direction = opposite_direction(direction)
@@ -452,7 +478,10 @@ class Pawn < Piece
   end
 
   def en_passant?(piece:, last_row:)
-    distance_from_start >= 3 && piece.is_a?(Pawn) && color != piece.color &&distance(row, last_row) == 2 && distance(column, piece.column) == 1
+    distance_from_start >= 3 && piece.is_a?(Pawn) && color != piece.color && distance(row,
+                                                                                      last_row) == 2 && distance(
+                                                                                        column, piece.column
+                                                                                      ) == 1
   end
 
   def filter_moves(board, move_hash = moves_sums)
@@ -677,7 +706,7 @@ class ChessBoard < Board
   def insert_pieces
     # insert_set(Yellow.new)
     # insert_set(Blue.new)
-    king = King.new(color: 'blue', row: 7, column: 0)
+    king = King.new(color: 'blue', row: 7, column: 4)
     insert(board_piece: king, row: king.row, column: king.column)
     enemy_king = King.new(color: 'yellow', row: 0, column: 4)
     insert(board_piece: enemy_king, row: enemy_king.row, column: enemy_king.column)
@@ -687,7 +716,7 @@ class ChessBoard < Board
 
     rook_one = Rook.new(color: 'yellow', row: 0, column: 7)
     insert(board_piece: rook_one, row: rook_one.row, column: rook_one.column)
-    rook_two = Rook.new(color: 'blue', row: 7, column: 6)
+    rook_two = Rook.new(color: 'blue', row: 7, column: 7)
     insert(board_piece: rook_two, row: rook_two.row, column: rook_two.column)
 
     # pawn = SecondPlayerPawn.new(color: 'blue', row: 4, column: 0)
@@ -1228,8 +1257,8 @@ class Chess
 end
 
 chess = Chess.new
-# chess.play
-board = chess.board
-player = chess.players[0]
-king = board.select_king(player)
-p king.right_castling_conditions(board)
+chess.play
+# board = chess.board
+# player = chess.players[0]
+# king = board.select_king(player)
+# p king.right_castling_conditions(board)
