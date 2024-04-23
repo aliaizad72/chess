@@ -217,6 +217,77 @@ class CastlingPiece < Piece
                   end
   end
 
+
+end
+
+# chess piece Rook
+class Rook < CastlingPiece
+  def initials
+    'R'
+  end
+
+  def move_directions
+    %i[north
+       south
+       west
+       east]
+  end
+
+  def scalar
+    7
+  end
+end
+
+# chess piece Bishop
+class Bishop < Piece
+  def initials
+    'B'
+  end
+
+  def move_directions
+    %i[north_east
+       north_west
+       south_east
+       south_west]
+  end
+
+  def scalar
+    7
+  end
+end
+
+# chess piece Knight
+class Knight < Piece
+  def initials
+    'N'
+  end
+
+  def all_moves
+    { l1: [[1, 2]],
+      l2: [[1, -2]],
+      l3: [[2, 1]],
+      l4: [[2, -1]],
+      l5: [[-1, 2]],
+      l6: [[-1, -2]],
+      l7: [[-2, 1]],
+      l8: [[-2, -1]] }
+  end
+end
+
+# chess piece King
+class King < CastlingPiece
+  def initials
+    'K'
+  end
+
+  def checked?(board)
+    attacked?(board: board, row: row, column: column)
+  end
+
+  def attacked?(board:, row:, column:)
+    non_knight_attack?(board: board, row: row, column: column) || knight_attack?(board: board, row: row, column: column)
+  end
+
   def castling_path?(board)
     unblocked?(path: [1, 2, 3], board: board) || unblocked?(path: [5, 6], board: board)
   end
@@ -302,71 +373,6 @@ class CastlingPiece < Piece
       return true if board.enemy?(colored_obj: self, row: move[0], column: move[1])
     end
     false
-  end
-end
-
-# chess piece Rook
-class Rook < CastlingPiece
-  def initials
-    'R'
-  end
-
-  def move_directions
-    %i[north
-       south
-       west
-       east]
-  end
-
-  def scalar
-    7
-  end
-end
-
-# chess piece Bishop
-class Bishop < Piece
-  def initials
-    'B'
-  end
-
-  def move_directions
-    %i[north_east
-       north_west
-       south_east
-       south_west]
-  end
-
-  def scalar
-    7
-  end
-end
-
-# chess piece Knight
-class Knight < Piece
-  def initials
-    'N'
-  end
-
-  def all_moves
-    { l1: [[1, 2]],
-      l2: [[1, -2]],
-      l3: [[2, 1]],
-      l4: [[2, -1]],
-      l5: [[-1, 2]],
-      l6: [[-1, -2]],
-      l7: [[-2, 1]],
-      l8: [[-2, -1]] }
-  end
-end
-
-# chess piece King
-class King < CastlingPiece
-  def initials
-    'K'
-  end
-
-  def checked?(board)
-    non_knight_attack?(board: board, row: row, column: column) || knight_attack?(board: board, row: row, column: column)
   end
 end
 
@@ -647,18 +653,18 @@ class ChessBoard < Board
   end
 
   def insert_pieces
-    insert_set(Yellow.new)
-    insert_set(Blue.new)
-    # king = King.new(color: 'blue', row: 7, column: 0)
-    # insert(board_piece: king, row: king.row, column: king.column)
-    # enemy_king = King.new(color: 'yellow', row: 0, column: 7)
-    # insert(board_piece: enemy_king, row: enemy_king.row, column: enemy_king.column)
+    # insert_set(Yellow.new)
+    # insert_set(Blue.new)
+    king = King.new(color: 'blue', row: 7, column: 0)
+    insert(board_piece: king, row: king.row, column: king.column)
+    enemy_king = King.new(color: 'yellow', row: 0, column: 4)
+    insert(board_piece: enemy_king, row: enemy_king.row, column: enemy_king.column)
 
     # bishop = Bishop.new(color: 'yellow', row: 5, column: 7)
     # insert(board_piece: bishop, row: bishop.row, column: bishop.column)
 
-    # rook_one = Rook.new(color: 'blue', row: 7, column: 7)
-    # insert(board_piece: rook_one, row: rook_one.row, column: rook_one.column)
+    rook_one = Rook.new(color: 'blue', row: 7, column: 5)
+    insert(board_piece: rook_one, row: rook_one.row, column: rook_one.column)
     # rook_two = Rook.new(color: 'blue', row: 1, column: 0)
     # insert(board_piece: rook_two, row: rook_two.row, column: rook_two.column)
 
@@ -1200,4 +1206,8 @@ class Chess
 end
 
 chess = Chess.new
-chess.play
+# chess.play
+board = chess.board
+player = chess.players[0]
+king = board.select_king(player)
+p king.attacked?(board: board, row: 0, column: 5)
