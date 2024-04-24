@@ -278,19 +278,16 @@ class King < CastlingPiece
     'K'
   end
 
-  def filter_moves(board)
-    move_hash = filter_left_castling(board: board, move_hash: moves_sums)
-    move_hash = filter_right_castling(board: board, move_hash: move_hash)
-    move_hash = filter_in_bounds(board: board, move_hash: move_hash)
-    filter_blocked_path(board: board, move_hash: move_hash)
-  end
-
   def castling_conditions(path:, board:, rook_col:)
     piece = board.select(row: row, column: rook_col)
-    first_move && check_rook?(piece) && check_first_move?(piece) && check_path_unblocked?(path: path,
-                                                                                          board: board) && check_path_unattacked?(
-                                                                                            path: path, board: board
-                                                                                          )
+    first_move && check_rook?(piece) && check_first_move?(piece) && check_path_unblocked?(path: path, board: board) && check_path_unattacked?(path: path, board: board)
+  end
+
+  def add_castling(board:, move_hash:)
+    return move_hash if checked?(board)
+
+    move_hash = filter_left_castling(board: board, move_hash: move_hash)
+    filter_right_castling(board: board, move_hash: move_hash)
   end
 
   def filter_left_castling(board:, move_hash:)
@@ -700,6 +697,7 @@ class ChessBoard < Board
     piece = select(row: row, column: column)
     move_hash = piece.filter_moves(self)
     move_hash = filter_checked_moves(piece, move_hash)
+    move_hash = piece.add_castling(board: self, move_hash: move_hash) if piece.is_a?(King)
     move_hash.reject { |_direction, moves| moves.empty? }
   end
 
@@ -716,7 +714,7 @@ class ChessBoard < Board
 
     rook_one = Rook.new(color: 'yellow', row: 0, column: 7)
     insert(board_piece: rook_one, row: rook_one.row, column: rook_one.column)
-    rook_two = Rook.new(color: 'blue', row: 7, column: 7)
+    rook_two = Rook.new(color: 'yellow', row: 0, column: 0)
     insert(board_piece: rook_two, row: rook_two.row, column: rook_two.column)
 
     # pawn = SecondPlayerPawn.new(color: 'blue', row: 4, column: 0)
