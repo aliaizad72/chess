@@ -712,9 +712,9 @@ class ChessBoard < Board
     # bishop = Bishop.new(color: 'yellow', row: 5, column: 7)
     # insert(board_piece: bishop, row: bishop.row, column: bishop.column)
 
-    rook_one = Rook.new(color: 'yellow', row: 0, column: 7)
+    rook_one = Rook.new(color: 'blue', row: 7, column: 7)
     insert(board_piece: rook_one, row: rook_one.row, column: rook_one.column)
-    rook_two = Rook.new(color: 'yellow', row: 0, column: 0)
+    rook_two = Rook.new(color: 'blue', row: 7, column: 0)
     insert(board_piece: rook_two, row: rook_two.row, column: rook_two.column)
 
     # pawn = SecondPlayerPawn.new(color: 'blue', row: 4, column: 0)
@@ -737,6 +737,16 @@ class ChessBoard < Board
     if en_passant_move?(from_row: from_row, from_column: from_column, to_row: to_row, to_column: to_column)
       super(from_row: from_row, from_column: from_column, to_row: to_row, to_column: to_column)
       en_passant(to_row: to_row, to_column: to_column)
+    elsif right_castling_move?(from_row: from_row, from_column: from_column, to_row: to_row, to_column: to_column)
+      super(from_row: from_row, from_column: from_column, to_row: to_row, to_column: to_column)
+      rook_row = to_row
+      rook_column = to_column + 1
+      super(from_row: rook_row, from_column: rook_column, to_row: rook_row, to_column: rook_column - 2)
+    elsif left_castling_move?(from_row: from_row, from_column: from_column, to_row: to_row, to_column: to_column)
+      super(from_row: from_row, from_column: from_column, to_row: to_row, to_column: to_column)
+      rook_row = to_row
+      rook_column = to_column - 2
+      super(from_row: rook_row, from_column: rook_column, to_row: rook_row, to_column: rook_column + 3)
     else
       super(from_row: from_row, from_column: from_column, to_row: to_row, to_column: to_column)
     end
@@ -751,6 +761,21 @@ class ChessBoard < Board
     end
 
     super
+  end
+
+  def castling_move?(from_row:, from_column:, to_row:, to_column:, column_diff:)
+    to_move = select(row: from_row, column: from_column)
+    diff = from_column - to_column
+
+    to_move.is_a?(King) && diff == column_diff
+  end
+
+  def right_castling_move?(from_row:, from_column:, to_row:, to_column:)
+    castling_move?(from_row: from_row, from_column: from_column, to_row: to_row, to_column: to_column, column_diff: -2)
+  end
+
+  def left_castling_move?(from_row:, from_column:, to_row:, to_column:)
+    castling_move?(from_row: from_row, from_column: from_column, to_row: to_row, to_column: to_column, column_diff: 2)
   end
 
   def en_passant(to_row:, to_column:)
