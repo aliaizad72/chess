@@ -2,7 +2,7 @@
 
 # the game
 class Chess
-  attr_accessor :board, :winner
+  attr_accessor :board, :winner, :current_player
   attr_reader :io, :players, :display
 
   def initialize
@@ -11,6 +11,7 @@ class Chess
     @io = ChessIO.new(board)
     @players = add_players
     @winner = nil
+    @current_player = nil
   end
 
   def play
@@ -43,9 +44,13 @@ class Chess
 
         break if endgame?
 
+        @current_player = player
         display.show_board
         io.announce_turn(player)
-        move(player)
+        if move(player) == 'save'
+          save
+          exit 0
+        end
         board.promotion
         check_if_checked(player)
       end
@@ -74,10 +79,21 @@ class Chess
   def move(player)
     io.error('check') if board.checked?(player)
     input = io.ask_and_confirm(player)
+    return input if input == 'save'
+
     move_input = io.ask_move(input)
     piece = display.translate(input)
     move = display.translate(move_input)
     board.move(from_row: piece[0], from_column: piece[1], to_row: move[0], to_column: move[1])
+  end
+
+  def save
+    current_game = YAML.dump(self)
+    Dir.mkdir('saved_games') unless Dir.exist?('saved_games')
+    filename = io.ask('filename')
+    path = "saved_games/#{filename}.yaml"
+    File.open(path, 'w') { |file| file.write(current_game) }
+    puts 'Your game has been saved. Exiting the program.'
   end
 
   def check_if_checked(player)

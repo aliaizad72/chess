@@ -149,6 +149,8 @@ class ChessIO
     confirm = 'n'
     until confirm == 'y'
       input = ask_piece(player)
+      return input if input == 'save'
+
       coordinates = display.translate(input)
       display.show_moves(row: coordinates[0], column: coordinates[1])
       confirm = ask('confirm')
@@ -169,6 +171,8 @@ class ChessIO
   # private
   def ask_piece(player)
     input = ask('piece_input')
+    return input if input == 'save'
+
     input = check_valid_input(input: input, ask_method: 'piece_input')
     input = check_input_piece(input)
     input = check_input_enemy(player: player, input: input)
@@ -184,7 +188,8 @@ class ChessIO
     { 'name' => 'Enter your name: ',
       'piece_input' => 'Enter the piece you want to move: ',
       'confirm' => 'Is this the piece you wanted to select? y/n: ',
-      'move' => 'Enter the destination coordinates: ' }[type]
+      'move' => 'Enter the destination coordinates: ',
+      'filename' => 'Enter your preferred filename for this save: ' }[type]
   end
 
   def check_valid_input(input:, ask_method:)

@@ -66,12 +66,12 @@ class ChessBoard < Board
   end
 
   def insert_pieces
-    # insert_set(Yellow.new)
-    # insert_set(Blue.new)
-    king = King.new(color: 'blue', row: 7, column: 4)
-    insert(board_piece: king, row: king.row, column: king.column)
-    enemy_king = King.new(color: 'yellow', row: 0, column: 4)
-    insert(board_piece: enemy_king, row: enemy_king.row, column: enemy_king.column)
+    insert_set(Yellow.new)
+    insert_set(Blue.new)
+    # king = King.new(color: 'blue', row: 7, column: 4)
+    # insert(board_piece: king, row: king.row, column: king.column)
+    # enemy_king = King.new(color: 'yellow', row: 0, column: 4)
+    # insert(board_piece: enemy_king, row: enemy_king.row, column: enemy_king.column)
 
     # bishop = Bishop.new(color: 'yellow', row: 5, column: 7)
     # insert(board_piece: bishop, row: bishop.row, column: bishop.column)
@@ -81,8 +81,8 @@ class ChessBoard < Board
     # rook_two = Rook.new(color: 'blue', row: 7, column: 0)
     # insert(board_piece: rook_two, row: rook_two.row, column: rook_two.column)
 
-    pawn = FirstPlayerPawn.new(color: 'yellow', row: 6, column: 0)
-    insert(board_piece: pawn, row: pawn.row, column: pawn.column)
+    # pawn = FirstPlayerPawn.new(color: 'yellow', row: 6, column: 0)
+    # insert(board_piece: pawn, row: pawn.row, column: pawn.column)
 
     # enemy_pawn = FirstPlayerPawn.new(color: 'yellow', row: 3, column: 0)
     # insert(board_piece: enemy_pawn, row: enemy_pawn.row, column: enemy_pawn.column)
@@ -128,6 +128,8 @@ class ChessBoard < Board
   end
 
   def promotion
+    return unless last_move
+
     piece = last_move[:moved]
     return unless piece.is_a?(Pawn) && last_move[:moved_coordinates][0] == piece.promotion_row
 

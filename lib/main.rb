@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'colorize'
+require 'yaml'
 require_relative './board'
 require_relative './piece'
 require_relative './set'
