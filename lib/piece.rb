@@ -401,6 +401,10 @@ class Pawn < Piece
     # implement this in subclass
   end
 
+  def promotion_row
+    # implement this in subclass
+  end
+
   def distance(loc_one, loc_two)
     (loc_one - loc_two).abs
   end
@@ -497,6 +501,10 @@ class FirstPlayerPawn < Pawn
   def en_pass_attack_row
     row - 1
   end
+
+  def promotion_row
+    7
+  end
 end
 
 # Pawn piece for Player move Second
@@ -530,5 +538,9 @@ class SecondPlayerPawn < Pawn
 
   def en_pass_attack_row
     row + 1
+  end
+
+  def promotion_row
+    0
   end
 end

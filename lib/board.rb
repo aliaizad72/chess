@@ -66,12 +66,12 @@ class ChessBoard < Board
   end
 
   def insert_pieces
-    insert_set(Yellow.new)
-    insert_set(Blue.new)
-    # king = King.new(color: 'blue', row: 7, column: 4)
-    # insert(board_piece: king, row: king.row, column: king.column)
-    # enemy_king = King.new(color: 'yellow', row: 0, column: 4)
-    # insert(board_piece: enemy_king, row: enemy_king.row, column: enemy_king.column)
+    # insert_set(Yellow.new)
+    # insert_set(Blue.new)
+    king = King.new(color: 'blue', row: 7, column: 4)
+    insert(board_piece: king, row: king.row, column: king.column)
+    enemy_king = King.new(color: 'yellow', row: 0, column: 4)
+    insert(board_piece: enemy_king, row: enemy_king.row, column: enemy_king.column)
 
     # bishop = Bishop.new(color: 'yellow', row: 5, column: 7)
     # insert(board_piece: bishop, row: bishop.row, column: bishop.column)
@@ -81,8 +81,8 @@ class ChessBoard < Board
     # rook_two = Rook.new(color: 'blue', row: 7, column: 0)
     # insert(board_piece: rook_two, row: rook_two.row, column: rook_two.column)
 
-    # pawn = SecondPlayerPawn.new(color: 'blue', row: 4, column: 0)
-    # insert(board_piece: pawn, row: pawn.row, column: pawn.column)
+    pawn = FirstPlayerPawn.new(color: 'yellow', row: 6, column: 0)
+    insert(board_piece: pawn, row: pawn.row, column: pawn.column)
 
     # enemy_pawn = FirstPlayerPawn.new(color: 'yellow', row: 3, column: 0)
     # insert(board_piece: enemy_pawn, row: enemy_pawn.row, column: enemy_pawn.column)
@@ -125,6 +125,35 @@ class ChessBoard < Board
     end
 
     super
+  end
+
+  def promotion
+    piece = last_move[:moved]
+    return unless piece.is_a?(Pawn) && last_move[:moved_coordinates][0] == piece.promotion_row
+
+    piece_class = ask_class
+    new_piece = piece_class.new(color: piece.color, row: piece.row, column: piece.column)
+    insert(board_piece: new_piece, row: new_piece.row, column: new_piece.column)
+  end
+
+  def ask_class
+    puts "Enter the first letter of the piece you want your pawn to upgrade to? e.g 'Q' for Queen."
+    print 'First letter: '
+    input = gets.chomp
+    to_class(input)
+  end
+
+  def to_class(input)
+    case input
+    when 'R'
+      Rook
+    when 'B'
+      Bishop
+    when 'N'
+      Knight
+    else
+      Queen
+    end
   end
 
   def castling_move?(from_row:, from_column:, to_row:, to_column:, column_diff:)

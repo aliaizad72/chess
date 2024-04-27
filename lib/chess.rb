@@ -46,6 +46,7 @@ class Chess
         display.show_board
         io.announce_turn(player)
         move(player)
+        board.promotion
         check_if_checked(player)
       end
     end
