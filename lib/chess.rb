@@ -15,7 +15,6 @@ class Game
   end
 
   def play
-    io.intro
     io.instructions
     io.announce_colors(players)
     play_round
@@ -130,6 +129,8 @@ class Chess
   attr_reader :game
 
   def initialize
+    puts "Welcome to Chess."
+    puts
     @game = load_game
     game.play
   end

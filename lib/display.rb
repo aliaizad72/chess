@@ -120,11 +120,18 @@ class ChessIO
   end
 
   def intro
+    puts
     puts 'Welcome to Chess'
+    puts
   end
 
   def instructions
+    puts
     puts "To select a piece, enter coordinates. For example, 'a2' for yellow Knight."
+    puts "It is the same to move the selected piece."
+    puts
+    puts "You can save the game at anytime by typing 'save' in the prompt."
+    puts
   end
 
   def announce_colors(player_array)
@@ -134,6 +141,7 @@ class ChessIO
   end
 
   def announce_turn(player)
+    puts
     puts "#{player.name}, it is your turn."
   end
 
