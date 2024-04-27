@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 # the game
-class Chess
-  attr_accessor :board, :winner, :current_player
-  attr_reader :io, :players, :display
+class Game
+  attr_accessor :board, :winner, :current_player, :players
+  attr_reader :io, :display
 
   def initialize
     @board = ChessBoard.new
@@ -88,10 +88,10 @@ class Chess
   end
 
   def save
-    current_game = YAML.dump(self)
+    current_game = Marshal.dump(self)
     Dir.mkdir('saved_games') unless Dir.exist?('saved_games')
     filename = io.ask('filename')
-    path = "saved_games/#{filename}.yaml"
+    path = "saved_games/#{filename}"
     File.open(path, 'w') { |file| file.write(current_game) }
     puts 'Your game has been saved. Exiting the program.'
   end
@@ -123,5 +123,44 @@ class Chess
 
   def sort_players(player_array)
     player_array.sort_by(&:color).reverse!
+  end
+end
+
+class Chess
+  attr_reader :game
+
+  def initialize
+    @game = load_game
+    game.play
+  end
+
+  def load_game
+    input = ask_game
+    if input == '2'
+      filename = ask_filename
+      path = "saved_games/#{filename}"
+      game = Marshal.load(File.read(path))
+      rearrange_players(game)
+    else
+      Game.new
+    end
+  end
+
+  def rearrange_players(game)
+    first_player = game.current_player
+    game.players.delete(first_player)
+    second_player = game.players[0]
+    game.players = [first_player, second_player]
+    game
+  end
+
+  def ask_game
+    print 'Enter 1 to start a new game, enter 2 to load a saved game: '
+    gets.chomp
+  end
+
+  def ask_filename
+    print 'Enter the filename: '
+    gets.chomp
   end
 end

@@ -21,7 +21,6 @@ class Player
 end
 
 chess = Chess.new
-chess.play
 # board = chess.board
 # player = chess.players[0]
 # king = board.select_king(player)
